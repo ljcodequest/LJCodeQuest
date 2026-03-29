@@ -1,100 +1,43 @@
-# 📚 LJ CodeQuest — Project Documentation
+# LJ CodeQuest — System Guides
 
-> Your comprehensive guide to understanding, developing, and extending the LJ CodeQuest e-learning & coding assessment platform.
-
----
-
-## 🏗️ Project Overview
-
-**LJ CodeQuest** is an advanced e-learning and coding assessment platform (inspired by HackerRank) built with modern web technologies. It provides:
-
-- **Strict Mastery Progression** — Students must master each topic before advancing
-- **Multiple Assessment Types** — MCQ, multi-select, descriptive, and live coding challenges
-- **Code Execution Sandbox** — Real-time code compilation using the Piston API
-- **Automated Certificates** — PDF certificates with unique IDs and verification
-- **Gamification** — XP points, badges, streaks, and a global leaderboard
-- **AI-Powered Hints** — Intelligent code review and guidance
-
-### Author
-
-**Lahiru Harshana Jayasinghe** — Full-Stack Developer
+> **Purpose:** These guide files are the single source of truth for all AI agents and developers working on this codebase. Read them before writing or modifying any application code.
 
 ---
 
-## 📖 Documentation Index
+## Guide Index
 
-| Guide | Description |
-|-------|-------------|
-| [Project Structure](./project-structure.md) | Complete folder structure breakdown and file responsibilities |
-| [Tech Stack](./tech-stack.md) | Technology choices, versions, and rationale |
-| [Database Schema](./database-schema.md) | Full MongoDB schema design for all collections |
-| [API Reference](./api-reference.md) | RESTful API endpoint documentation |
-| [Features Roadmap](./features-roadmap.md) | Full feature roadmap across all development phases |
-
----
-
-## 🚀 Quick Start
-
-### Prerequisites
-
-- **Node.js** ≥ 18.18.0
-- **npm** ≥ 9.x
-- **MongoDB** Atlas cluster or local MongoDB instance
-- **Firebase** project with Authentication enabled
-
-### Installation
-
-```bash
-# 1. Clone the repository
-git clone https://github.com/your-username/lj-codequest.git
-cd lj-codequest
-
-# 2. Install dependencies
-npm install
-
-# 3. Set up environment variables
-cp .env.example .env.local
-# Edit .env.local with your MongoDB URI and Firebase credentials
-
-# 4. Start the development server
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) to view the application.
-
-### Available Scripts
-
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start development server with hot-reload |
-| `npm run build` | Create optimized production build |
-| `npm run start` | Start production server |
-| `npm run lint` | Run ESLint for code quality checks |
+| # | File | Description |
+|---|------|-------------|
+| 1 | [progression-system.md](./progression-system.md) | **Core business logic.** The HackerRank-style mastery progression — how courses, difficulty levels, tracks, and questions interact. The sequential unlock rules. The gating conditions. Read this first. |
+| 2 | [data-model-reference.md](./data-model-reference.md) | Complete reference of every MongoDB/Mongoose model, their fields, relationships, indexes, and the schema contract that progression logic depends on. |
+| 3 | [progression-api-contract.md](./progression-api-contract.md) | The exact API endpoints, request/response shapes, and server-side validation rules that enforce the progression system. Covers both existing and required-but-missing endpoints. |
+| 4 | [frontend-progression-rules.md](./frontend-progression-rules.md) | How the frontend must render locked/unlocked/completed states, prevent unauthorized navigation, and present the one-question-at-a-time UX. |
+| 5 | [known-bugs-and-gaps.md](./known-bugs-and-gaps.md) | An honest audit of every bug, bad practice, missing feature, and incomplete implementation in the current codebase that must be fixed to make the progression system work correctly. |
+| 6 | [coding-standards.md](./coding-standards.md) | Project conventions — file naming, import patterns, error handling, TypeScript strictness, API response shapes, and code style rules that all future code must follow. |
 
 ---
 
-## 🔐 Environment Variables
+## How to Use These Guides
 
-Copy `.env.example` to `.env.local` and configure:
-
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `MONGODB_URI` | MongoDB connection string | ✅ |
-| `NEXT_PUBLIC_FIREBASE_API_KEY` | Firebase API key | ✅ |
-| `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` | Firebase auth domain | ✅ |
-| `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | Firebase project ID | ✅ |
-| `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` | Firebase storage bucket | ✅ |
-| `NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID` | Firebase sender ID | ✅ |
-| `NEXT_PUBLIC_FIREBASE_APP_ID` | Firebase app ID | ✅ |
-| `FIREBASE_ADMIN_PROJECT_ID` | Firebase Admin project ID | ✅ |
-| `FIREBASE_ADMIN_CLIENT_EMAIL` | Firebase Admin client email | ✅ |
-| `FIREBASE_ADMIN_PRIVATE_KEY` | Firebase Admin private key | ✅ |
-| `PISTON_API_URL` | Piston code execution API URL | ✅ |
-| `NEXT_PUBLIC_APP_URL` | Application base URL | ✅ |
-| `NEXT_PUBLIC_APP_NAME` | Application display name | ✅ |
+1. **Before any code change:** Read `progression-system.md` to understand the core rules.
+2. **Before touching a model:** Read `data-model-reference.md` to understand the schema contract.
+3. **Before writing an API route:** Read `progression-api-contract.md` for the expected signatures.
+4. **Before building UI:** Read `frontend-progression-rules.md` for rendering rules.
+5. **Before fixing a bug:** Read `known-bugs-and-gaps.md` to see if it's already documented.
+6. **Always:** Follow `coding-standards.md` for all code you write.
 
 ---
 
-## 📄 License
+## Tech Stack Summary
 
-This project is proprietary software developed by **Lahiru Harshana Jayasinghe**.
+| Layer | Technology | Version |
+|-------|-----------|---------|
+| Framework | Next.js (App Router) | 16.2.1 |
+| Language | TypeScript | ^5 |
+| UI | React | 19.2.4 |
+| Styling | Tailwind CSS v4 + Shadcn UI | ^4 / ^4.1.0 |
+| Database | MongoDB via Mongoose | ^9.3.2 |
+| Auth | Firebase Auth (client) + Firebase Admin (server) | ^12.11.0 / ^13.7.0 |
+| Code Editor | Monaco Editor | ^4.7.0 |
+| AI | Google Generative AI (Gemini) | ^0.24.1 |
+| Forms | React Hook Form + Zod | ^7.72.0 / ^4.3.6 |

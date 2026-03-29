@@ -1,41 +1,82 @@
-import { InferSchemaType, Schema, model, models } from "mongoose";
+import mongoose, { Schema, Document, Model } from "mongoose";
 
-import { QUESTION_TYPES, REVIEW_STATUSES } from "@/constants";
+export interface ISubmission extends Document {
+  userId: mongoose.Types.ObjectId;
+  questionId: mongoose.Types.ObjectId;
+  trackId: mongoose.Types.ObjectId;
+  courseId: mongoose.Types.ObjectId;
+  type: string;
+  
+  // Answers
+  selectedOptions?: string[];
+  descriptiveAnswer?: string;
+  code?: string;
+  language?: string;
 
-const testResultSchema = new Schema(
+  // Results
+  isCorrect: boolean;
+  score: number;
+  xpEarned: number;
+
+  // Coding Results
+  testResults?: Array<{
+    testCaseId: string;
+    passed: boolean;
+    actualOutput: string;
+    executionTime: number;
+    memoryUsed: number;
+    error?: string;
+  }>;
+  compilationError?: string;
+  executionTime?: number;
+
+  // Descriptive
+  reviewStatus?: "pending" | "reviewed" | "rejected";
+  reviewedBy?: mongoose.Types.ObjectId;
+  reviewFeedback?: string;
+  reviewedAt?: Date;
+
+  attemptNumber: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const submissionSchema = new Schema<ISubmission>(
   {
-    testCaseId: { type: String, required: true, trim: true },
-    passed: { type: Boolean, default: false },
-    actualOutput: { type: String },
-    executionTime: { type: Number, min: 0 },
-    memoryUsed: { type: Number, min: 0 },
-    error: { type: String },
-  },
-  { _id: false }
-);
-
-const submissionSchema = new Schema(
-  {
-    userId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
-    questionId: { type: Schema.Types.ObjectId, ref: "Question", required: true, index: true },
-    trackId: { type: Schema.Types.ObjectId, ref: "Track", required: true, index: true },
+    userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    questionId: { type: Schema.Types.ObjectId, ref: "Question", required: true },
+    trackId: { type: Schema.Types.ObjectId, ref: "Track", required: true },
     courseId: { type: Schema.Types.ObjectId, ref: "Course", required: true },
-    type: { type: String, enum: QUESTION_TYPES, required: true },
-    selectedOptions: { type: [String], default: [] },
+    type: { type: String, required: true },
+    
+    selectedOptions: [{ type: String }],
     descriptiveAnswer: { type: String },
     code: { type: String },
-    language: { type: String, trim: true },
+    language: { type: String },
+
     isCorrect: { type: Boolean, default: false },
-    score: { type: Number, default: 0, min: 0, max: 100 },
-    xpEarned: { type: Number, default: 0, min: 0 },
-    testResults: { type: [testResultSchema], default: [] },
+    score: { type: Number, default: 0 },
+    xpEarned: { type: Number, default: 0 },
+
+    testResults: [
+      {
+        testCaseId: { type: String },
+        passed: { type: Boolean },
+        actualOutput: { type: String },
+        executionTime: { type: Number },
+        memoryUsed: { type: Number },
+        error: { type: String },
+      },
+    ],
     compilationError: { type: String },
-    executionTime: { type: Number, min: 0 },
-    reviewStatus: { type: String, enum: REVIEW_STATUSES, default: "pending" },
+    executionTime: { type: Number },
+
+    reviewStatus: { type: String, enum: ["pending", "reviewed", "rejected"], index: true },
     reviewedBy: { type: Schema.Types.ObjectId, ref: "User" },
     reviewFeedback: { type: String },
     reviewedAt: { type: Date },
-    attemptNumber: { type: Number, default: 1, min: 1 },
+
+    attemptNumber: { type: Number, default: 1 },
   },
   {
     timestamps: true,
@@ -44,10 +85,6 @@ const submissionSchema = new Schema(
 
 submissionSchema.index({ userId: 1, questionId: 1 });
 submissionSchema.index({ userId: 1, trackId: 1 });
-submissionSchema.index({ reviewStatus: 1 });
 submissionSchema.index({ createdAt: -1 });
 
-export type Submission = InferSchemaType<typeof submissionSchema>;
-
-export const SubmissionModel =
-  models.Submission || model("Submission", submissionSchema);
+export const Submission: Model<ISubmission> = mongoose.models.Submission || mongoose.model<ISubmission>("Submission", submissionSchema);

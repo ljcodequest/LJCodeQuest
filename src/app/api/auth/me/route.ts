@@ -7,6 +7,7 @@ import {
   readJsonBody,
 } from "@/lib/api";
 import { requireRegisteredUser } from "@/lib/auth";
+import { UserModel } from "@/models";
 
 interface UpdateProfileBody {
   displayName?: string;
@@ -70,7 +71,7 @@ export async function PUT(request: Request) {
     );
 
     if (username && username !== user.username) {
-      const duplicateUsername = await user.constructor.findOne({
+      const duplicateUsername = await UserModel.findOne({
         username,
         firebaseUid: { $ne: session.firebaseUid },
       }).lean();
@@ -100,16 +101,11 @@ export async function PUT(request: Request) {
       user.avatarUrl = avatarUrl;
     }
 
-    if (github !== undefined) {
-      user.github = github;
-    }
-
-    if (linkedin !== undefined) {
-      user.linkedin = linkedin;
-    }
-
-    if (website !== undefined) {
-      user.website = website;
+    if (github !== undefined || linkedin !== undefined || website !== undefined) {
+      user.social = user.social || {};
+      if (github !== undefined) user.social.github = github;
+      if (linkedin !== undefined) user.social.linkedin = linkedin;
+      if (website !== undefined) user.social.website = website;
     }
 
     if (isPublicProfile !== undefined) {

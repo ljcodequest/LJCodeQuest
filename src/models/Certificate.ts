@@ -1,28 +1,45 @@
-import { InferSchemaType, Schema, model, models } from "mongoose";
+import mongoose, { Schema, Document, Model } from "mongoose";
 
-const certificateSchema = new Schema(
+export interface ICertificate extends Document {
+  certificateId: string;
+  userId: mongoose.Types.ObjectId;
+  courseId: mongoose.Types.ObjectId;
+  issuedAt: Date;
+  metadata?: any;
+}
+
+const certificateSchema = new Schema<ICertificate>(
   {
-    certificateId: { type: String, required: true, trim: true, uppercase: true, unique: true },
-    userId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
-    courseId: { type: Schema.Types.ObjectId, ref: "Course", required: true, index: true },
-    userName: { type: String, required: true, trim: true },
-    courseName: { type: String, required: true, trim: true },
-    issueDate: { type: Date, default: Date.now },
-    completionScore: { type: Number, required: true, min: 0, max: 100 },
-    isValid: { type: Boolean, default: true },
-    verificationUrl: { type: String, trim: true },
-    pdfUrl: { type: String, trim: true },
-    templateVersion: { type: String, default: "v1" },
+    certificateId: { 
+       type: String, 
+       required: true, 
+       unique: true, 
+       index: true 
+    },
+    userId: { 
+       type: Schema.Types.ObjectId, 
+       ref: "User", 
+       required: true 
+    },
+    courseId: { 
+       type: Schema.Types.ObjectId, 
+       ref: "Course", 
+       required: true 
+    },
+    issuedAt: { 
+       type: Date, 
+       default: Date.now 
+    },
+    metadata: {
+       type: Schema.Types.Mixed
+    }
   },
   {
     timestamps: true,
   }
 );
 
-certificateSchema.index({ userId: 1 });
-certificateSchema.index({ courseId: 1, userId: 1 }, { unique: true });
+// Compound index to prevent creating duplicate certificates for the same course + user
+certificateSchema.index({ userId: 1, courseId: 1 }, { unique: true });
 
-export type Certificate = InferSchemaType<typeof certificateSchema>;
-
-export const CertificateModel =
-  models.Certificate || model("Certificate", certificateSchema);
+export const CertificateModel: Model<ICertificate> = mongoose.models.Certificate || mongoose.model<ICertificate>("Certificate", certificateSchema);

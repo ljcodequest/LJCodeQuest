@@ -6,6 +6,7 @@ import {
   requireObjectId,
 } from "@/lib/api";
 import { requireRegisteredUser } from "@/lib/auth";
+import { ApiRouteError } from "@/lib/api";
 import dbConnect from "@/lib/db";
 import { sanitizeQuestionForRole } from "@/lib/question-visibility";
 import { QuestionModel } from "@/models";
@@ -13,6 +14,10 @@ import { QuestionModel } from "@/models";
 export async function GET(request: Request) {
   try {
     const { role } = await requireRegisteredUser(request);
+    
+    if (role !== "admin" && role !== "instructor") {
+      throw new ApiRouteError(403, "FORBIDDEN", "Only admins and instructors can fetch all questions.");
+    }
 
     await dbConnect();
 
@@ -22,7 +27,6 @@ export async function GET(request: Request) {
 
     const query: Record<string, unknown> = {
       trackId,
-      ...(role === "student" ? { isPublished: true } : {}),
     };
 
     if (type) {
@@ -32,7 +36,7 @@ export async function GET(request: Request) {
     const questions = await QuestionModel.find(query).sort({ order: 1 }).lean();
 
     return apiSuccess(
-      questions.map((question) => sanitizeQuestionForRole(question, role)),
+      questions.map((question) => sanitizeQuestionForRole(question as any, role)),
       "Questions fetched successfully"
     );
   } catch (error) {

@@ -1,42 +1,65 @@
-import { InferSchemaType, Schema, model, models } from "mongoose";
+import mongoose, { Schema, Document, Model } from "mongoose";
 
-import { USER_ROLES } from "@/constants";
+export interface IUser extends Document {
+  firebaseUid: string;
+  email: string;
+  displayName: string;
+  username: string;
+  avatarUrl?: string;
+  bio?: string;
+  role: "student" | "admin" | "instructor";
+  xp: number;
+  level: number;
+  badges: Array<{
+    id: string;
+    name: string;
+    description: string;
+    earnedAt: Date;
+  }>;
+  streak: {
+    current: number;
+    longest: number;
+    lastActiveDate: Date;
+  };
+  social: {
+    github?: string;
+    linkedin?: string;
+    website?: string;
+  };
+  isPublicProfile: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
-const badgeSchema = new Schema(
+const userSchema = new Schema<IUser>(
   {
-    id: { type: String, required: true, trim: true },
-    name: { type: String, required: true, trim: true },
-    description: { type: String, required: true, trim: true },
-    earnedAt: { type: Date, required: true },
-  },
-  { _id: false }
-);
-
-const streakSchema = new Schema(
-  {
-    current: { type: Number, default: 0, min: 0 },
-    longest: { type: Number, default: 0, min: 0 },
-    lastActiveDate: { type: Date },
-  },
-  { _id: false }
-);
-
-const userSchema = new Schema(
-  {
-    firebaseUid: { type: String, trim: true, unique: true, sparse: true },
-    email: { type: String, required: true, trim: true, lowercase: true, unique: true },
-    displayName: { type: String, required: true, trim: true },
-    username: { type: String, required: true, trim: true, lowercase: true, unique: true },
-    avatarUrl: { type: String, trim: true },
-    bio: { type: String, trim: true, maxlength: 300 },
-    role: { type: String, enum: USER_ROLES, default: "student" },
-    xp: { type: Number, default: 0, min: 0 },
-    level: { type: Number, default: 1, min: 1 },
-    badges: { type: [badgeSchema], default: [] },
-    streak: { type: streakSchema, default: () => ({}) },
-    github: { type: String, trim: true },
-    linkedin: { type: String, trim: true },
-    website: { type: String, trim: true },
+    firebaseUid: { type: String, required: true, unique: true, sparse: true, index: true },
+    email: { type: String, required: true, unique: true, index: true },
+    displayName: { type: String, required: true },
+    username: { type: String, required: true, unique: true, index: true },
+    avatarUrl: { type: String },
+    bio: { type: String, maxlength: 300 },
+    role: { type: String, enum: ["student", "admin", "instructor"], default: "student" },
+    xp: { type: Number, default: 0, index: -1 },
+    level: { type: Number, default: 1 },
+    badges: [
+      {
+        id: { type: String, required: true },
+        name: { type: String, required: true },
+        description: { type: String, required: true },
+        earnedAt: { type: Date, required: true },
+      },
+    ],
+    streak: {
+      current: { type: Number, default: 0 },
+      longest: { type: Number, default: 0 },
+      lastActiveDate: { type: Date },
+    },
+    social: {
+      github: { type: String },
+      linkedin: { type: String },
+      website: { type: String },
+    },
     isPublicProfile: { type: Boolean, default: true },
   },
   {
@@ -44,8 +67,4 @@ const userSchema = new Schema(
   }
 );
 
-userSchema.index({ xp: -1 });
-
-export type User = InferSchemaType<typeof userSchema>;
-
-export const UserModel = models.User || model("User", userSchema);
+export const User: Model<IUser> = mongoose.models.User || mongoose.model<IUser>("User", userSchema);

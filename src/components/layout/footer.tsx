@@ -4,7 +4,7 @@ import { Separator } from "@/components/ui/separator";
 
 const footerLinks = {
   Platform: [
-    { label: "Explore Tracks", href: "/explore" },
+    { label: "Explore Tracks", href: "/courses" },
     { label: "Challenges", href: "/challenges" },
     { label: "Leaderboard", href: "/leaderboard" },
     { label: "Certificates", href: "/certificates" },

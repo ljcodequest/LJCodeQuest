@@ -32,7 +32,7 @@ export async function GET(
       {
         ...track,
         questions: questions.map((question) =>
-          sanitizeQuestionForRole(question, role)
+          sanitizeQuestionForRole(question as any, role)
         ),
       },
       "Track fetched successfully"

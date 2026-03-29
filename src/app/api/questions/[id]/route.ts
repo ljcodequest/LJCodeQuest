@@ -22,7 +22,7 @@ export async function GET(
     }
 
     return apiSuccess(
-      sanitizeQuestionForRole(question, role),
+      sanitizeQuestionForRole(question as any, role),
       "Question fetched successfully"
     );
   } catch (error) {

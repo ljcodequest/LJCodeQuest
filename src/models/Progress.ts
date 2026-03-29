@@ -1,30 +1,45 @@
-import { InferSchemaType, Schema, model, models } from "mongoose";
+import mongoose, { Schema, Document, Model } from "mongoose";
 
-import { PROGRESS_STATUSES, TRACK_PROGRESS_STATUSES } from "@/constants";
+export interface IProgress extends Document {
+  userId: mongoose.Types.ObjectId;
+  courseId: mongoose.Types.ObjectId;
+  enrolledAt: Date;
+  lastActiveAt: Date;
+  completedTracks: mongoose.Types.ObjectId[];
+  currentTrackId?: mongoose.Types.ObjectId;
+  completedQuestions: mongoose.Types.ObjectId[];
+  completedLevels: ("beginner" | "intermediate" | "advanced")[];
+  currentTrackProgress?: {
+    trackId: mongoose.Types.ObjectId;
+    currentQuestionOrder: number;
+    totalQuestionsInTrack: number;
+  };
+  percentComplete: number;
+  isCompleted: boolean;
+  completedAt?: Date;
+  certificateId?: mongoose.Types.ObjectId;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
-const trackProgressSchema = new Schema(
+const progressSchema = new Schema<IProgress>(
   {
-    trackId: { type: Schema.Types.ObjectId, ref: "Track", required: true },
-    status: { type: String, enum: TRACK_PROGRESS_STATUSES, default: "locked" },
-    score: { type: Number, default: 0, min: 0, max: 100 },
-    questionsCompleted: { type: Number, default: 0, min: 0 },
-    totalQuestions: { type: Number, default: 0, min: 0 },
-    completedAt: { type: Date },
-    attempts: { type: Number, default: 0, min: 0 },
-  },
-  { _id: false }
-);
-
-const progressSchema = new Schema(
-  {
-    userId: { type: Schema.Types.ObjectId, ref: "User", required: true, index: true },
-    courseId: { type: Schema.Types.ObjectId, ref: "Course", required: true, index: true },
+    userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    courseId: { type: Schema.Types.ObjectId, ref: "Course", required: true },
     enrolledAt: { type: Date, default: Date.now },
-    status: { type: String, enum: PROGRESS_STATUSES, default: "enrolled" },
-    completionPercent: { type: Number, default: 0, min: 0, max: 100 },
+    lastActiveAt: { type: Date, default: Date.now },
+    completedTracks: [{ type: Schema.Types.ObjectId, ref: "Track" }],
+    currentTrackId: { type: Schema.Types.ObjectId, ref: "Track" },
+    completedQuestions: [{ type: Schema.Types.ObjectId, ref: "Question" }],
+    completedLevels: [{ type: String, enum: ["beginner", "intermediate", "advanced"] }],
+    currentTrackProgress: {
+      trackId: { type: Schema.Types.ObjectId, ref: "Track" },
+      currentQuestionOrder: { type: Number, default: 1 },
+      totalQuestionsInTrack: { type: Number },
+    },
+    percentComplete: { type: Number, default: 0 },
+    isCompleted: { type: Boolean, default: false },
     completedAt: { type: Date },
-    trackProgress: { type: [trackProgressSchema], default: [] },
-    totalXpEarned: { type: Number, default: 0, min: 0 },
     certificateId: { type: Schema.Types.ObjectId, ref: "Certificate" },
   },
   {
@@ -32,10 +47,8 @@ const progressSchema = new Schema(
   }
 );
 
+// A user should only have one progress document per course
 progressSchema.index({ userId: 1, courseId: 1 }, { unique: true });
-progressSchema.index({ userId: 1 });
-progressSchema.index({ status: 1 });
+progressSchema.index({ userId: 1, lastActiveAt: -1 });
 
-export type Progress = InferSchemaType<typeof progressSchema>;
-
-export const ProgressModel = models.Progress || model("Progress", progressSchema);
+export const Progress: Model<IProgress> = mongoose.models.Progress || mongoose.model<IProgress>("Progress", progressSchema);

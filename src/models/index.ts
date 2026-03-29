@@ -1,7 +1,8 @@
 export { CertificateModel } from "@/models/Certificate";
-export { CourseModel } from "@/models/Course";
-export { ProgressModel } from "@/models/Progress";
-export { QuestionModel } from "@/models/Question";
-export { SubmissionModel } from "@/models/Submission";
-export { TrackModel } from "@/models/Track";
-export { UserModel } from "@/models/User";
+export { Course as CourseModel } from "@/models/Course";
+export { Progress as ProgressModel } from "@/models/Progress";
+export { Question as QuestionModel } from "@/models/Question";
+export { Submission as SubmissionModel } from "@/models/Submission";
+export { Track as TrackModel } from "@/models/Track";
+export { User as UserModel } from "@/models/User";
+export { ActivityLogModel } from "@/models/ActivityLog";

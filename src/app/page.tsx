@@ -60,7 +60,7 @@ function HeroSection() {
 
         {/* CTA Buttons */}
         <div className="animate-fade-in-up delay-400 flex flex-col sm:flex-row items-center justify-center gap-4">
-          <Link href="/explore">
+          <Link href="/courses">
             <Button
               size="lg"
               className="h-13 px-8 text-base gradient-bg text-white border-0 hover:opacity-90 transition-all glow-blue gap-2 group"
@@ -70,7 +70,7 @@ function HeroSection() {
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </Button>
           </Link>
-          <Link href="/explore">
+          <Link href="/courses">
             <Button
               size="lg"
               variant="outline"
@@ -357,7 +357,7 @@ function TracksSection() {
 
         {/* View All */}
         <div className="text-center mt-10">
-          <Link href="/explore">
+          <Link href="/courses">
             <Button variant="outline" size="lg" className="gap-2 group">
               View All Tracks
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -472,7 +472,7 @@ function CTASection() {
           CodeQuest. It&apos;s free to get started.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <Link href="/explore">
+          <Link href="/courses">
             <Button
               size="lg"
               className="h-13 px-8 text-base bg-white text-gray-900 hover:bg-white/90 gap-2 group"
@@ -482,7 +482,7 @@ function CTASection() {
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </Button>
           </Link>
-          <Link href="/explore">
+          <Link href="/courses">
             <Button
               size="lg"
               variant="outline"

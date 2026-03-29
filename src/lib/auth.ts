@@ -4,7 +4,7 @@ import { USER_ROLES } from "@/constants";
 import { ApiRouteError } from "@/lib/api";
 import { getFirebaseProjectId } from "@/lib/env";
 import dbConnect from "@/lib/db";
-import { UserModel } from "@/models/User";
+import { User as UserModel } from "@/models/User";
 import type { UserRole } from "@/types";
 
 const firebaseJwks = createRemoteJWKSet(
@@ -34,6 +34,27 @@ function getBearerToken(request: Request) {
   }
 
   return authorizationHeader.slice("Bearer ".length).trim() || null;
+}
+
+function getSessionCookieToken(request: Request) {
+  const cookieHeader = request.headers.get("cookie");
+
+  if (!cookieHeader) {
+    return null;
+  }
+
+  const cookieParts = cookieHeader.split(";");
+
+  for (const part of cookieParts) {
+    const [rawName, ...rawValue] = part.trim().split("=");
+
+    if (rawName === "session") {
+      const token = rawValue.join("=").trim();
+      return token ? decodeURIComponent(token) : null;
+    }
+  }
+
+  return null;
 }
 
 function getDevelopmentSession(request: Request): AuthSession | null {
@@ -106,7 +127,7 @@ export async function authenticateRequest(request: Request) {
     return developmentSession;
   }
 
-  const token = getBearerToken(request);
+  const token = getBearerToken(request) ?? getSessionCookieToken(request);
 
   if (!token) {
     throw new ApiRouteError(
@@ -158,7 +179,7 @@ export async function requireRegisteredUser(request: Request) {
     );
   }
 
-  return context;
+  return context as AuthContext & { user: NonNullable<AuthContext["user"]> };
 }
 
 export async function requireAdmin(request: Request) {

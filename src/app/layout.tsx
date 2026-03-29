@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
+import { AuthProvider } from "@/contexts/AuthContext";
 
 const inter = Inter({
   variable: "--font-sans",
@@ -59,11 +60,13 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <TooltipProvider>
+          <AuthProvider>
+            <TooltipProvider>
             <Navbar />
             <main className="flex-1 pt-16">{children}</main>
             <Footer />
           </TooltipProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

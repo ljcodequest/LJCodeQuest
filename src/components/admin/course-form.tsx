@@ -10,6 +10,8 @@ export default function CourseEditor({ courseId }: { courseId?: string }) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(!!courseId);
   const [isSaving, setIsSaving] = useState(false);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -67,6 +69,39 @@ export default function CourseEditor({ courseId }: { courseId?: string }) {
       alert("Failed to save course.");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleImageUpload = async () => {
+    if (!imageFile) {
+      alert("Please choose an image file first.");
+      return;
+    }
+
+    setIsUploadingImage(true);
+
+    try {
+      const uploadFormData = new FormData();
+      uploadFormData.append("file", imageFile);
+
+      const res = await fetch("/api/admin/uploads/course-image", {
+        method: "POST",
+        body: uploadFormData,
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data?.success || !data?.data?.url) {
+        throw new Error(data?.error || "Failed to upload image.");
+      }
+
+      setFormData((prev) => ({ ...prev, thumbnail: data.data.url }));
+      setImageFile(null);
+    } catch (error: any) {
+      console.error("Image upload error", error);
+      alert(error?.message || "Image upload failed.");
+    } finally {
+      setIsUploadingImage(false);
     }
   };
 
@@ -177,7 +212,35 @@ export default function CourseEditor({ courseId }: { courseId?: string }) {
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium">Thumbnail URL</label>
+          <label className="text-sm font-medium">Thumbnail</label>
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col md:flex-row gap-3">
+              <input
+                type="file"
+                accept="image/*"
+                className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                onChange={(e) => setImageFile(e.target.files?.[0] ?? null)}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleImageUpload}
+                disabled={!imageFile || isUploadingImage}
+              >
+                {isUploadingImage ? "Uploading..." : "Upload Image"}
+              </Button>
+            </div>
+            {formData.thumbnail ? (
+              <div className="w-full max-w-sm h-40 overflow-hidden rounded-md border border-border bg-muted">
+                <img
+                  src={formData.thumbnail}
+                  alt="Course thumbnail preview"
+                  className="w-full h-full object-cover"
+                />
+              </div>
+            ) : null}
+          </div>
+          <label className="text-sm font-medium">Thumbnail URL (optional manual)</label>
           <input
             type="url"
             className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"

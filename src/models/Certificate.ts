@@ -5,6 +5,9 @@ export interface ICertificate extends Document {
   userId: mongoose.Types.ObjectId;
   courseId: mongoose.Types.ObjectId;
   issuedAt: Date;
+  expiresAt?: Date;
+  status: "active" | "revoked" | "expired" | "reissued";
+  verificationHash: string;
   metadata?: any;
 }
 
@@ -29,6 +32,21 @@ const certificateSchema = new Schema<ICertificate>(
     issuedAt: { 
        type: Date, 
        default: Date.now 
+    },
+    expiresAt: {
+       type: Date
+    },
+    status: {
+       type: String,
+       enum: ["active", "revoked", "expired", "reissued"],
+       default: "active",
+       index: true
+    },
+    verificationHash: {
+       type: String,
+       required: true,
+       unique: true,
+       index: true
     },
     metadata: {
        type: Schema.Types.Mixed

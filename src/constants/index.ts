@@ -8,7 +8,7 @@ import type {
   UserRole,
 } from "@/types";
 
-export const USER_ROLES = ["student", "admin", "instructor"] as const satisfies readonly UserRole[];
+export const USER_ROLES = ["user", "admin"] as const satisfies readonly UserRole[];
 
 export const COURSE_DIFFICULTIES = [
   "beginner",

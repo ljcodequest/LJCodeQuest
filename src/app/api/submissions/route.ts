@@ -13,8 +13,18 @@ import {
   ActivityLogModel
 } from "@/models";
 import { calculateLevel, evaluateStreak } from "@/lib/gamification";
+import { requireActiveAttempt, markAttemptSubmitted } from "@/lib/attempts";
+import { runCodeAgainstTestCases } from "@/lib/code-runner";
+import crypto from "crypto";
 
 const DIFFICULTY_ORDER = ["beginner", "intermediate", "advanced"] as const;
+
+function createVerificationHash(certificateId: string, userId: string, courseId: string) {
+  return crypto
+    .createHash("sha256")
+    .update(`${certificateId}:${userId}:${courseId}:${process.env.CERTIFICATE_SECRET || "lj-codequest"}`)
+    .digest("hex");
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,7 +32,7 @@ export async function POST(request: NextRequest) {
     await dbConnect();
     
     const body = await request.json();
-    const { questionId, trackId, courseId, type, selectedOptions, descriptiveAnswer, codingPassed, code, language } = body;
+    const { questionId, trackId, courseId, type, selectedOptions, descriptiveAnswer, code, language } = body;
 
     // 1. Validation
     if (!questionId || !trackId || !courseId || !type) {
@@ -43,9 +53,9 @@ export async function POST(request: NextRequest) {
        throw new ApiRouteError(403, "NOT_ENROLLED", "Must enroll in course first.");
     }
 
-    const isAdminOrInstructor = context.role === "admin" || context.role === "instructor";
+    const isAdmin = context.role === "admin";
 
-    if (!isAdminOrInstructor) {
+    if (!isAdmin) {
       // Is track unlocked? (Completed tracks + Current track are unlocked)
       const isCompletedTrack = progress.completedTracks.some(id => id.toString() === trackId);
       const isCurrentTrack = progress.currentTrackId?.toString() === trackId;
@@ -61,13 +71,23 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    const activeAttempt = await requireActiveAttempt({
+      request,
+      userId: context.user._id,
+      courseId,
+      trackId,
+      question: question as Parameters<typeof requireActiveAttempt>[0]["question"],
+    });
+
     // 3. Evaluate
     let isCorrect = false;
     let score = 0;
     let xpEarned = 0;
 
     if (type === "mcq" || type === "multi-select") {
-       const correctOptions = (question.options || []).filter((o: any) => o.isCorrect).map((o: any) => o.id);
+       const correctOptions = (question.options || [])
+        .filter((option: { isCorrect?: boolean }) => option.isCorrect)
+        .map((option: { id?: string }) => option.id);
        if (Array.isArray(selectedOptions) && selectedOptions.length === correctOptions.length) {
           isCorrect = selectedOptions.every(id => correctOptions.includes(id));
        }
@@ -76,9 +96,16 @@ export async function POST(request: NextRequest) {
           xpEarned = question.xpReward || 10;
        }
     } else if (type === "coding") {
-       // FIXME: Use Code Execution service here for server validation. Trusting client for now.
-       if (codingPassed) {
-          isCorrect = true;
+       const sourceCode = typeof code === "string" ? code : descriptiveAnswer;
+       const execution = await runCodeAgainstTestCases({
+          language: typeof language === "string" ? language : question.language || "javascript",
+          sourceCode: typeof sourceCode === "string" ? sourceCode : "",
+          testCases: question.testCases || [],
+       });
+
+       isCorrect = execution.passed;
+
+       if (isCorrect) {
           score = 100;
           xpEarned = question.xpReward || 50;
        }
@@ -126,6 +153,10 @@ export async function POST(request: NextRequest) {
        attemptNumber,
        reviewStatus
     });
+
+    if (isCorrect) {
+      await markAttemptSubmitted(activeAttempt._id);
+    }
 
     let nextQuestionOrder = question.order;
     let trackCompleted = false;
@@ -183,7 +214,9 @@ export async function POST(request: NextRequest) {
             await ProgressModel.updateOne({ _id: progress._id }, { $addToSet: { completedLevels: track.difficulty } });
             
             // Advance to next level
-            const currentDiffIdx = DIFFICULTY_ORDER.indexOf(track.difficulty as any);
+            const currentDiffIdx = DIFFICULTY_ORDER.indexOf(
+              track.difficulty as (typeof DIFFICULTY_ORDER)[number]
+            );
             const nextDiff = currentDiffIdx >= 0 && currentDiffIdx < 2 ? DIFFICULTY_ORDER[currentDiffIdx + 1] : null;
             
             if (nextDiff) {
@@ -210,13 +243,34 @@ export async function POST(request: NextRequest) {
          
          if (courseCompleted) {
            const certId = `CERT-${Date.now().toString(36).toUpperCase()}`;
-           const cert = await CertificateModel.create({
-             certificateId: certId,
-             userId: context.user._id,
-             courseId: course._id,
-             issuedAt: new Date()
-           });
-           await ProgressModel.updateOne({ _id: progress._id }, { isCompleted: true, completedAt: new Date(), certificateId: cert._id });
+           const verificationHash = createVerificationHash(
+             certId,
+             context.user._id.toString(),
+             course._id.toString()
+           );
+           const cert = await CertificateModel.findOneAndUpdate(
+             { userId: context.user._id, courseId: course._id },
+             {
+               $setOnInsert: {
+                 certificateId: certId,
+                 userId: context.user._id,
+                 courseId: course._id,
+                 issuedAt: new Date(),
+                 status: "active",
+                 verificationHash,
+               },
+             },
+             { new: true, upsert: true }
+           );
+           await ProgressModel.updateOne(
+             { _id: progress._id },
+             {
+               isCompleted: true,
+               completedAt: new Date(),
+               certificateId: cert._id,
+               status: "certified",
+             }
+           );
            await ActivityLogModel.create({ userId: context.user._id, action: "course_complete", details: `Completed course ${courseId}` });
          }
        } else {
@@ -230,7 +284,10 @@ export async function POST(request: NextRequest) {
        const totalCourseQ = await QuestionModel.countDocuments({ trackId: { $in: course.tracks }, isPublished: true });
        const allCompletedQ = await SubmissionModel.distinct("questionId", { userId: context.user._id, courseId, isCorrect: true });
        const percentComplete = totalCourseQ > 0 ? (allCompletedQ.length / totalCourseQ) * 100 : 0;
-       await ProgressModel.updateOne({ _id: progress._id }, { percentComplete });
+       await ProgressModel.updateOne(
+         { _id: progress._id },
+         { percentComplete, status: courseCompleted ? "certified" : "in-progress" }
+       );
     }
 
     // Always update lastActiveAt

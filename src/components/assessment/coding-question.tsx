@@ -99,8 +99,8 @@ export default function CodingComponent({
              trackId,
              courseId,
              type: "coding",
-             descriptiveAnswer: code,
-             codingPassed: true
+             code,
+             language: mappedLanguage
           })
        });
 

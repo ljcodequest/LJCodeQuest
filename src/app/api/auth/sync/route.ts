@@ -43,7 +43,7 @@ export async function POST(req: Request) {
         displayName: name || baseUsername,
         username,
         avatarUrl: picture || "",
-        role: "student",
+        role: "user",
       });
     } else {
       // Optional: Update user info if it changed

@@ -12,18 +12,30 @@ export default function CourseEditor({ courseId }: { courseId?: string }) {
   const [isSaving, setIsSaving] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [availableCourses, setAvailableCourses] = useState<Array<{ _id: string; title: string }>>([]);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     shortDescription: "",
     difficulty: "beginner",
     language: "javascript",
+    estimatedHours: 4,
     thumbnail: "",
+    prerequisiteCourseIds: [] as string[],
     tags: "",
     isPublished: false,
   });
 
   useEffect(() => {
+    fetch("/api/admin/courses")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          setAvailableCourses(data.data);
+        }
+      })
+      .catch((error) => console.error("Failed to load course prerequisites", error));
+
     if (courseId) {
       fetch(`/api/admin/courses/${courseId}`)
         .then((res) => res.json())
@@ -31,6 +43,7 @@ export default function CourseEditor({ courseId }: { courseId?: string }) {
           if (data.success) {
             setFormData({
               ...data.data,
+              prerequisiteCourseIds: data.data.prerequisiteCourseIds || [],
               tags: data.data.tags ? data.data.tags.join(", ") : "",
             });
           }
@@ -46,6 +59,7 @@ export default function CourseEditor({ courseId }: { courseId?: string }) {
     try {
       const payload = {
         ...formData,
+        estimatedHours: Number(formData.estimatedHours) || 4,
         tags: formData.tags.split(",").map((t) => t.trim()).filter(Boolean),
       };
 
@@ -197,6 +211,49 @@ export default function CourseEditor({ courseId }: { courseId?: string }) {
               <option value="ruby">Ruby</option>
               <option value="php">PHP</option>
             </select>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Estimated Hours</label>
+            <input
+              type="number"
+              min={1}
+              className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+              value={formData.estimatedHours}
+              onChange={(e) => setFormData({ ...formData, estimatedHours: Number(e.target.value) })}
+            />
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <label className="text-sm font-medium">Prerequisite Courses</label>
+          <div className="rounded-md border border-border bg-background p-3 space-y-2 max-h-44 overflow-y-auto">
+            {availableCourses.filter((course) => course._id !== courseId).length === 0 ? (
+              <p className="text-sm text-muted-foreground">No other courses available yet.</p>
+            ) : (
+              availableCourses
+                .filter((course) => course._id !== courseId)
+                .map((course) => {
+                  const checked = formData.prerequisiteCourseIds.includes(course._id);
+                  return (
+                    <label key={course._id} className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={(e) => {
+                          setFormData((prev) => ({
+                            ...prev,
+                            prerequisiteCourseIds: e.target.checked
+                              ? [...prev.prerequisiteCourseIds, course._id]
+                              : prev.prerequisiteCourseIds.filter((id) => id !== course._id),
+                          }));
+                        }}
+                      />
+                      {course.title}
+                    </label>
+                  );
+                })
+            )}
           </div>
         </div>
 

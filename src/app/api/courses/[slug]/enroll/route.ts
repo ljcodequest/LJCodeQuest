@@ -34,6 +34,24 @@ export async function POST(
       throw new ApiRouteError(409, "CONFLICT", "Already enrolled in this course.");
     }
 
+    const prerequisites = course.prerequisiteCourseIds || [];
+
+    if (prerequisites.length > 0) {
+      const completedPrerequisites = await ProgressModel.countDocuments({
+        userId: context.user._id,
+        courseId: { $in: prerequisites },
+        isCompleted: true,
+      });
+
+      if (completedPrerequisites !== prerequisites.length) {
+        throw new ApiRouteError(
+          403,
+          "COURSE_LOCKED",
+          "Complete the prerequisite courses before enrolling."
+        );
+      }
+    }
+
     // 3. Find first track (beginner, order 1)
     const firstTrack = await TrackModel.findOne({
       courseId: course._id,
@@ -42,7 +60,7 @@ export async function POST(
     }).lean();
 
     // 4. Determine initial progress state
-    let currentTrackId = firstTrack ? firstTrack._id : undefined;
+    const currentTrackId = firstTrack ? firstTrack._id : undefined;
     let currentTrackProgress = undefined;
     
     if (firstTrack) {
@@ -62,6 +80,7 @@ export async function POST(
       completedQuestions: [],
       completedLevels: [],
       currentTrackProgress,
+      status: "enrolled",
       percentComplete: 0,
       isCompleted: false,
     });

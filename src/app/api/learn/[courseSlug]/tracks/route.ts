@@ -27,7 +27,7 @@ export async function GET(
 
     const tracks = await TrackModel.find({ courseId: course._id, isPublished: true }).sort({ difficulty: 1, order: 1 }).lean();
 
-    const isAdminOrInstructor = context.role === "admin" || context.role === "instructor";
+    const isAdmin = context.role === "admin";
     
     const completedTracks = progress.completedTracks.map(id => id.toString());
     const completedLevels = progress.completedLevels || [];
@@ -37,7 +37,7 @@ export async function GET(
        
        let levelStatus: "locked" | "in-progress" | "completed" = "locked";
 
-       if (isAdminOrInstructor) {
+       if (isAdmin) {
           levelStatus = "in-progress"; // simplified for admin access
        } else if (completedLevels.includes(difficulty)) {
           levelStatus = "completed";
@@ -54,7 +54,7 @@ export async function GET(
           let trackStatus: "locked" | "in-progress" | "completed" = "locked";
           const trackIdStr = track._id.toString();
 
-          if (isAdminOrInstructor) {
+          if (isAdmin) {
              trackStatus = "in-progress";
           } else if (completedTracks.includes(trackIdStr)) {
              trackStatus = "completed";

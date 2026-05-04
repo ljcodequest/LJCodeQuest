@@ -12,7 +12,7 @@ function omitKeys<T extends PlainObject>(
 }
 
 export function canViewQuestionAnswers(role: UserRole) {
-  return role === "admin" || role === "instructor";
+  return role === "admin";
 }
 
 export function sanitizeQuestionForRole<T extends PlainObject>(

@@ -6,3 +6,4 @@ export { Submission as SubmissionModel } from "@/models/Submission";
 export { Track as TrackModel } from "@/models/Track";
 export { User as UserModel } from "@/models/User";
 export { ActivityLogModel } from "@/models/ActivityLog";
+export { Attempt as AttemptModel } from "@/models/Attempt";

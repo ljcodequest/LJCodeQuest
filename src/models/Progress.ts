@@ -14,6 +14,7 @@ export interface IProgress extends Document {
     currentQuestionOrder: number;
     totalQuestionsInTrack: number;
   };
+  status: "enrolled" | "in-progress" | "assessment-unlocked" | "failed" | "passed" | "certified" | "certificate-expired";
   percentComplete: number;
   isCompleted: boolean;
   completedAt?: Date;
@@ -36,6 +37,20 @@ const progressSchema = new Schema<IProgress>(
       trackId: { type: Schema.Types.ObjectId, ref: "Track" },
       currentQuestionOrder: { type: Number, default: 1 },
       totalQuestionsInTrack: { type: Number },
+    },
+    status: {
+      type: String,
+      enum: [
+        "enrolled",
+        "in-progress",
+        "assessment-unlocked",
+        "failed",
+        "passed",
+        "certified",
+        "certificate-expired",
+      ],
+      default: "enrolled",
+      index: true,
     },
     percentComplete: { type: Number, default: 0 },
     isCompleted: { type: Boolean, default: false },

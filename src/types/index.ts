@@ -1,4 +1,4 @@
-export type UserRole = "student" | "admin" | "instructor";
+export type UserRole = "user" | "admin";
 
 export type CourseDifficulty = "beginner" | "intermediate" | "advanced";
 

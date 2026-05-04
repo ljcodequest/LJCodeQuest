@@ -4,6 +4,7 @@ import { requireRegisteredUser } from "@/lib/auth";
 import dbConnect from "@/lib/db";
 import { CourseModel, TrackModel, ProgressModel, QuestionModel } from "@/models";
 import { sanitizeQuestionForRole } from "@/lib/question-visibility";
+import { getOrCreateActiveAttempt } from "@/lib/attempts";
 
 export async function GET(
   request: NextRequest,
@@ -23,9 +24,9 @@ export async function GET(
     const progress = await ProgressModel.findOne({ userId: context.user._id, courseId: course._id }).lean();
     if (!progress) throw new ApiRouteError(403, "NOT_ENROLLED", "Not enrolled in this course.");
 
-    const isAdminOrInstructor = context.role === "admin" || context.role === "instructor";
+    const isAdmin = context.role === "admin";
 
-    if (!isAdminOrInstructor) {
+    if (!isAdmin) {
       const isCompletedTrack = progress.completedTracks.some(id => id.toString() === track._id.toString());
       const isCurrentTrack = progress.currentTrackId?.toString() === track._id.toString();
 
@@ -50,13 +51,31 @@ export async function GET(
     }
 
     // Attempted status
+    const attempt = await getOrCreateActiveAttempt({
+      request,
+      userId: context.user._id,
+      courseId: course._id,
+      trackId: track._id,
+      question: currentQuestion as Parameters<typeof getOrCreateActiveAttempt>[0]["question"],
+    });
+    const now = Date.now();
+    const timeRemainingMs = Math.max(0, attempt.expiresAt.getTime() - now);
     const previouslyAttempted = false; // We could ping SubmissionModel for this if needed
 
     // Sanitize for student
-    const sanitizedQuestion = sanitizeQuestionForRole(currentQuestion as any, context.role);
+    const sanitizedQuestion = sanitizeQuestionForRole(currentQuestion as unknown as Record<string, unknown>, context.role);
 
     return apiSuccess({
       question: sanitizedQuestion,
+      courseId: course._id,
+      trackId: track._id,
+      attempt: {
+        id: attempt._id,
+        startedAt: attempt.startedAt,
+        expiresAt: attempt.expiresAt,
+        timeLimitMinutes: attempt.snapshot.timeLimitMinutes,
+        timeRemainingMs,
+      },
       questionNumber: currentQuestion.order,
       totalQuestions: questions.length,
       allCompleted: false,

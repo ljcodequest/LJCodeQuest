@@ -17,7 +17,7 @@ export async function GET(
     const questionId = requireObjectId(id, "id");
     const question = await QuestionModel.findById(questionId).lean();
 
-    if (!question || (role === "student" && !question.isPublished)) {
+    if (!question || (role === "user" && !question.isPublished)) {
       throw new ApiRouteError(404, "NOT_FOUND", "Question not found");
     }
 

@@ -15,8 +15,8 @@ export async function GET(request: Request) {
   try {
     const { role } = await requireRegisteredUser(request);
     
-    if (role !== "admin" && role !== "instructor") {
-      throw new ApiRouteError(403, "FORBIDDEN", "Only admins and instructors can fetch all questions.");
+    if (role !== "admin") {
+      throw new ApiRouteError(403, "FORBIDDEN", "Only admins can fetch all questions.");
     }
 
     await dbConnect();

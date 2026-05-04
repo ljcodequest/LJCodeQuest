@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
   DropdownMenuLabel,
+  DropdownMenuGroup,
 } from "@/components/ui/dropdown-menu";
 
 interface User {
@@ -105,9 +106,8 @@ export default function AdminUsersPage() {
           onChange={(e) => setRoleFilter(e.target.value)}
         >
           <option value="all">All Roles</option>
-          <option value="student">Student</option>
+          <option value="user">User</option>
           <option value="admin">Admin</option>
-          <option value="instructor">Instructor</option>
         </select>
       </div>
 
@@ -157,8 +157,6 @@ export default function AdminUsersPage() {
                       <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full border ${
                         user.role === 'admin' 
                           ? 'bg-purple-500/10 text-purple-500 border-purple-500/20' 
-                          : user.role === 'instructor'
-                          ? 'bg-blue-500/10 text-blue-500 border-blue-500/20'
                           : 'bg-muted text-muted-foreground border-border'
                       }`}>
                         {user.role}
@@ -177,16 +175,15 @@ export default function AdminUsersPage() {
                           <UserCog className="h-4 w-4" />
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuLabel>Change Role</DropdownMenuLabel>
-                          <DropdownMenuItem className="cursor-pointer" onClick={() => changeRole(user._id, "student")} disabled={user.role === "student"}>
-                            Make Student
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="cursor-pointer" onClick={() => changeRole(user._id, "instructor")} disabled={user.role === "instructor"}>
-                            Make Instructor
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="cursor-pointer font-medium text-purple-500" onClick={() => changeRole(user._id, "admin")} disabled={user.role === "admin"}>
-                            Make Admin
-                          </DropdownMenuItem>
+                          <DropdownMenuGroup>
+                            <DropdownMenuLabel>Change Role</DropdownMenuLabel>
+                            <DropdownMenuItem className="cursor-pointer" onClick={() => changeRole(user._id, "user")} disabled={user.role === "user"}>
+                              Make User
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="cursor-pointer font-medium text-purple-500" onClick={() => changeRole(user._id, "admin")} disabled={user.role === "admin"}>
+                              Make Admin
+                            </DropdownMenuItem>
+                          </DropdownMenuGroup>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem className="cursor-pointer text-destructive focus:text-destructive text-xs" onClick={() => alert("Suspend not fully implemented yet.")}>
                             <ShieldAlert className="mr-2 h-3 w-3" />

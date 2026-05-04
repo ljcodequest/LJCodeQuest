@@ -4,6 +4,13 @@ import dbConnect from "@/lib/db";
 import { CertificateModel, ProgressModel, CourseModel, UserModel } from "@/models";
 import crypto from "crypto";
 
+function createVerificationHash(certificateId: string, userId: string, courseId: string) {
+  return crypto
+    .createHash("sha256")
+    .update(`${certificateId}:${userId}:${courseId}:${process.env.CERTIFICATE_SECRET || "lj-codequest"}`)
+    .digest("hex");
+}
+
 export async function POST(request: Request) {
   try {
     const context = await requireRegisteredUser(request);
@@ -39,11 +46,18 @@ export async function POST(request: Request) {
     const year = new Date().getFullYear();
     const randomHash = crypto.randomBytes(3).toString("hex").toUpperCase();
     const certificateId = `LJCQ-${year}-${randomHash}`;
+    const verificationHash = createVerificationHash(
+       certificateId,
+       context.user._id.toString(),
+       courseId
+    );
 
     const newCertificate = await CertificateModel.create({
        certificateId,
        userId: context.user._id,
-       courseId
+       courseId,
+       status: "active",
+       verificationHash,
     });
 
     // Optionally award a Badge or massive XP boost to the User Document here

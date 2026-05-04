@@ -6,7 +6,10 @@ export interface ICourse extends Document {
   description: string;
   shortDescription: string;
   thumbnail: string;
+  difficulty: "beginner" | "intermediate" | "advanced";
   language: string;
+  estimatedHours: number;
+  prerequisiteCourseIds: mongoose.Types.ObjectId[];
   tracks: mongoose.Types.ObjectId[];
   totalTracks: number;
   totalQuestions: number;
@@ -26,7 +29,15 @@ const courseSchema = new Schema<ICourse>(
     description: { type: String, required: true },
     shortDescription: { type: String, required: true, maxlength: 160 },
     thumbnail: { type: String, required: true },
+    difficulty: {
+      type: String,
+      enum: ["beginner", "intermediate", "advanced"],
+      default: "beginner",
+      index: true,
+    },
     language: { type: String, required: true, index: true },
+    estimatedHours: { type: Number, default: 4 },
+    prerequisiteCourseIds: [{ type: Schema.Types.ObjectId, ref: "Course" }],
     tracks: [{ type: Schema.Types.ObjectId, ref: "Track" }],
     totalTracks: { type: Number, default: 0 },
     totalQuestions: { type: Number, default: 0 },

@@ -36,12 +36,12 @@ export async function GET(
     }
 
     // Role bypass
-    const isAdminOrInstructor = context.role === "admin" || context.role === "instructor";
+    const isAdmin = context.role === "admin";
     
     let isCompletedTrack = false;
     let isCurrentTrack = false;
 
-    if (isAdminOrInstructor) {
+    if (isAdmin) {
        isCompletedTrack = true;
        isCurrentTrack = true;
     } else {
@@ -65,7 +65,9 @@ export async function GET(
     if (nextTrackInDifficulty) {
        nextTrackSlug = nextTrackInDifficulty.slug;
     } else {
-       const currentDiffIdx = DIFFICULTY_ORDER.indexOf(track.difficulty as any);
+       const currentDiffIdx = DIFFICULTY_ORDER.indexOf(
+          track.difficulty as (typeof DIFFICULTY_ORDER)[number]
+       );
        const nextDiff = currentDiffIdx >= 0 && currentDiffIdx < 2 ? DIFFICULTY_ORDER[currentDiffIdx + 1] : null;
        if (nextDiff) {
           const nextLevelTrack = await TrackModel.findOne({

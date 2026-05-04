@@ -72,7 +72,7 @@ function getDevelopmentSession(request: Request): AuthSession | null {
   const role =
     requestedRole && USER_ROLES.includes(requestedRole as UserRole)
       ? (requestedRole as UserRole)
-      : "student";
+      : "user";
 
   return {
     firebaseUid,
@@ -110,7 +110,7 @@ async function verifyFirebaseToken(token: string): Promise<AuthSession> {
     typeof payload.role === "string" &&
     USER_ROLES.includes(payload.role as UserRole)
       ? (payload.role as UserRole)
-      : "student";
+      : "user";
 
   return {
     firebaseUid: payload.sub,

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/db";
-import { CertificateModel, UserModel, CourseModel } from "@/models";
+import { CertificateModel } from "@/models";
 
 export async function GET(
   request: Request,
@@ -11,7 +11,7 @@ export async function GET(
     await dbConnect();
     
     // Allow users to verify certificates dynamically without Auth
-    const cert = await CertificateModel.findOne({ certificateId })
+    const cert = await CertificateModel.findOne({ certificateId, status: "active" })
        .populate("userId", "displayName username")
        .populate("courseId", "title difficulty")
        .lean();
@@ -25,6 +25,9 @@ export async function GET(
        data: {
           certificateId: cert.certificateId,
           issuedAt: cert.issuedAt,
+          expiresAt: cert.expiresAt,
+          status: cert.status,
+          verificationHash: cert.verificationHash,
           user: cert.userId,
           course: cert.courseId
        }

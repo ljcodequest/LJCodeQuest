@@ -23,7 +23,7 @@ export async function GET(
 
     const questions = await QuestionModel.find({
       trackId: track._id,
-      ...(role === "student" ? { isPublished: true } : {}),
+      ...(role === "user" ? { isPublished: true } : {}),
     })
       .sort({ order: 1 })
       .lean();

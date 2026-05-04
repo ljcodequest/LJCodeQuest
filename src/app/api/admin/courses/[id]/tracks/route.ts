@@ -53,6 +53,9 @@ export async function POST(
       title: body.title,
       slug: body.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, ''),
       description: body.description || "",
+      difficulty: ["beginner", "intermediate", "advanced"].includes(body.difficulty)
+        ? body.difficulty
+        : "beginner",
       theory: body.theoryContent || body.theory || "",
       order,
       xpReward: body.xpReward || 100,

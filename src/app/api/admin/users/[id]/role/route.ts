@@ -15,7 +15,7 @@ export async function PUT(
     const { id } = await params;
     const body = await readJsonBody<{ role: string }>(request);
     
-    if (!["student", "admin", "instructor"].includes(body.role)) {
+    if (!["user", "admin"].includes(body.role)) {
       return NextResponse.json({ success: false, error: "Invalid role" }, { status: 400 });
     }
 

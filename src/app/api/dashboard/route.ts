@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireRegisteredUser } from "@/lib/auth";
 import dbConnect from "@/lib/db";
-import { UserModel, ProgressModel, CourseModel } from "@/models";
+import { UserModel, ProgressModel, CourseModel, TrackModel } from "@/models";
 import { evaluateStreak, getLevelProgress } from "@/lib/gamification";
 
 export async function GET(request: Request) {

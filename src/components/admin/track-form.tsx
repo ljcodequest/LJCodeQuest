@@ -6,6 +6,8 @@ import { ArrowLeft, Save } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
+type Difficulty = "beginner" | "intermediate" | "advanced";
+
 export default function TrackEditor({ courseId, trackId }: { courseId?: string, trackId?: string }) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(!!trackId);
@@ -13,6 +15,7 @@ export default function TrackEditor({ courseId, trackId }: { courseId?: string, 
   const [formData, setFormData] = useState({
     title: "",
     description: "",
+    difficulty: "beginner" as Difficulty,
     theoryContent: "",
     passingScore: 80,
     xpReward: 100,
@@ -25,7 +28,15 @@ export default function TrackEditor({ courseId, trackId }: { courseId?: string, 
         .then((res) => res.json())
         .then((data) => {
           if (data.success) {
-            setFormData(data.data);
+            setFormData({
+              title: data.data.title || "",
+              description: data.data.description || "",
+              difficulty: (data.data.difficulty || "beginner") as Difficulty,
+              theoryContent: data.data.theory || data.data.theoryContent || "",
+              passingScore: data.data.passingScore ?? 80,
+              xpReward: data.data.xpReward ?? 100,
+              isPublished: Boolean(data.data.isPublished),
+            });
           }
         })
         .finally(() => setIsLoading(false));
@@ -107,12 +118,27 @@ export default function TrackEditor({ courseId, trackId }: { courseId?: string, 
         <div className="space-y-2">
           <label className="text-sm font-medium">Short Description</label>
           <input
+            required
             type="text"
             className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
             value={formData.description}
             onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             placeholder="What will the student learn in this track?"
           />
+        </div>
+
+        <div className="space-y-2">
+          <label className="text-sm font-medium">Difficulty</label>
+          <select
+            required
+            className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            value={formData.difficulty}
+            onChange={(e) => setFormData({ ...formData, difficulty: e.target.value as Difficulty })}
+          >
+            <option value="beginner">Beginner</option>
+            <option value="intermediate">Intermediate</option>
+            <option value="advanced">Advanced</option>
+          </select>
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">

@@ -90,6 +90,27 @@ export default function QuestionEditor({ trackId, questionId }: { trackId?: stri
     setIsSaving(true);
 
     try {
+      if (type === "descriptive") {
+        const answerIds = sampleAnswer
+          .split(",")
+          .map((id) => id.trim())
+          .filter(Boolean);
+        const optionIds = new Set(options.map((o) => o.id.trim()).filter(Boolean));
+        const hasInvalidAnswerId = answerIds.some((id) => !optionIds.has(id));
+
+        if (!starterCode.includes("[[") || !starterCode.includes("]]")) {
+          alert("Template must include at least one placeholder like [[BLANK_1]].");
+          setIsSaving(false);
+          return;
+        }
+
+        if (answerIds.length === 0 || hasInvalidAnswerId) {
+          alert("Correct Option IDs must be comma-separated IDs that exist in the options bank.");
+          setIsSaving(false);
+          return;
+        }
+      }
+
       const payload: any = {
         type,
         title,
@@ -104,6 +125,8 @@ export default function QuestionEditor({ trackId, questionId }: { trackId?: stri
       if (type === "mcq" || type === "multi-select") {
         payload.options = options;
       } else if (type === "descriptive") {
+        payload.starterCode = starterCode;
+        payload.options = options;
         payload.sampleAnswer = sampleAnswer;
         payload.maxWords = maxWords;
         payload.rubric = rubric;
@@ -194,7 +217,7 @@ export default function QuestionEditor({ trackId, questionId }: { trackId?: stri
               >
                 <option value="mcq">Multiple Choice Question (MCQ)</option>
                 <option value="multi-select">Multi-Select Checkboxes</option>
-                <option value="descriptive">Descriptive (Manual Review)</option>
+                <option value="descriptive">Fill in the Blanks (Option Bank)</option>
                 <option value="coding">Coding Challenge (Execution)</option>
               </select>
             </div>
@@ -339,6 +362,90 @@ export default function QuestionEditor({ trackId, questionId }: { trackId?: stri
 
           {type === "descriptive" && (
             <div className="space-y-4 bg-muted/30 p-4 rounded-md border border-border">
+              <p className="text-xs text-muted-foreground">
+                Use placeholders like [[BLANK_1]], [[BLANK_2]] in the template. In "Correct Option IDs", provide IDs in blank order.
+              </p>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Fill-in-the-Blanks Template</label>
+                <textarea
+                  rows={4}
+                  required
+                  className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary"
+                  value={starterCode}
+                  onChange={(e) => setStarterCode(e.target.value)}
+                  placeholder="A pure function always returns the [[BLANK_1]] output for the same input and has no [[BLANK_2]] effects."
+                />
+              </div>
+
+              <div className="space-y-4">
+                <div className="flex justify-between items-center mb-2">
+                  <label className="text-sm font-medium">Options Bank</label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setOptions([...options, { id: Date.now().toString(), text: "New Option", isCorrect: false }])}
+                  >
+                    <Plus className="h-4 w-4 mr-1" /> Add Option
+                  </Button>
+                </div>
+
+                {options.map((option, index) => (
+                  <div key={option.id} className="grid grid-cols-12 gap-2 items-center">
+                    <div className="col-span-12 md:col-span-2">
+                      <input
+                        type="text"
+                        required
+                        className="w-full bg-background border border-border rounded-md px-2 py-1.5 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-primary"
+                        value={option.id}
+                        onChange={(e) => {
+                          const newOptions = [...options];
+                          newOptions[index].id = e.target.value;
+                          setOptions(newOptions);
+                        }}
+                        placeholder="id"
+                      />
+                    </div>
+                    <div className="col-span-12 md:col-span-7">
+                      <input
+                        type="text"
+                        required
+                        className="w-full bg-background border border-border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+                        value={option.text}
+                        onChange={(e) => {
+                          const newOptions = [...options];
+                          newOptions[index].text = e.target.value;
+                          setOptions(newOptions);
+                        }}
+                        placeholder="Option text"
+                      />
+                    </div>
+                    <label className="col-span-8 md:col-span-2 flex items-center gap-2 text-xs cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={option.isCorrect}
+                        onChange={() => handleOptionCorrectChange(index)}
+                        className="h-4 w-4 rounded text-primary focus:ring-primary"
+                      />
+                      Correct
+                    </label>
+                    <div className="col-span-4 md:col-span-1 flex justify-end">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="text-destructive h-8 w-8"
+                        onClick={() => setOptions(options.filter((_, i) => i !== index))}
+                        disabled={options.length <= 2}
+                      >
+                        <Trash className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
               <div className="grid gap-6 md:grid-cols-2">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Max Words Limit</label>
@@ -354,13 +461,14 @@ export default function QuestionEditor({ trackId, questionId }: { trackId?: stri
               </div>
               
               <div className="space-y-2">
-                <label className="text-sm font-medium">Sample Answer</label>
+                <label className="text-sm font-medium">Correct Option IDs (blank order)</label>
                 <textarea
                   rows={3}
+                  required
                   className="w-full bg-background border border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   value={sampleAnswer}
                   onChange={(e) => setSampleAnswer(e.target.value)}
-                  placeholder="The ideal answer for the reviewer to reference."
+                  placeholder="same,side"
                 />
               </div>
 

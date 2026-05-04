@@ -2,7 +2,7 @@
 
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Loader2, Trophy, ArrowRight } from "lucide-react";
+import { ArrowLeft, Loader2, Trophy, ArrowRight, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import MCQComponent from "@/components/assessment/mcq-question";
@@ -22,6 +22,8 @@ export default function QuizRouterPage({
   const [questionStats, setQuestionStats] = useState({ number: 1, total: 1 });
   const [trackId, setTrackId] = useState<string>("");
   const [courseId, setCourseId] = useState<string>("");
+  const [attempt, setAttempt] = useState<any>(null);
+  const [timeRemainingMs, setTimeRemainingMs] = useState(0);
   
   const [totalXpEarned, setTotalXpEarned] = useState(0);
   const [isFinished, setIsFinished] = useState(false);
@@ -41,13 +43,10 @@ export default function QuizRouterPage({
          } else if (json.data.question) {
             setCurrentQuestion(json.data.question);
             setQuestionStats({ number: json.data.questionNumber, total: json.data.totalQuestions });
-            setTrackId(json.data.question.trackId); 
-            // We need courseId. A hack: submission can take courseSlug instead of courseId, 
-            // but our submission API expects courseId.
-            // Let's modify the /current API to return courseId if we didn't. 
-            // Wait, we can fetch courseId from Course API or let the submission API handle it. 
-            // Actually, we already modified the API to expect courseId. 
-            // We should ensure `courseId` is returned in the /current response or embedded in the question.
+            setTrackId(json.data.trackId || json.data.question.trackId);
+            setCourseId(json.data.courseId || courseId);
+            setAttempt(json.data.attempt);
+            setTimeRemainingMs(json.data.attempt?.timeRemainingMs || 0);
          } else {
             setIsFinished(true);
          }
@@ -82,6 +81,21 @@ export default function QuizRouterPage({
     };
     init();
   }, [courseSlug, trackSlug, router]);
+
+  useEffect(() => {
+    if (!attempt?.expiresAt) return;
+
+    const interval = window.setInterval(() => {
+      const remaining = Math.max(0, new Date(attempt.expiresAt).getTime() - Date.now());
+      setTimeRemainingMs(remaining);
+
+      if (remaining === 0) {
+        window.clearInterval(interval);
+      }
+    }, 1000);
+
+    return () => window.clearInterval(interval);
+  }, [attempt?.expiresAt]);
 
   const handleNextQuestion = (xpEarned: number, submissionData?: any) => {
      setTotalXpEarned(prev => prev + xpEarned);
@@ -148,6 +162,9 @@ export default function QuizRouterPage({
   }
 
   const progressPercent = ((questionStats.number - 1) / questionStats.total) * 100;
+  const minutes = Math.floor(timeRemainingMs / 60000);
+  const seconds = Math.floor((timeRemainingMs % 60000) / 1000);
+  const timerLabel = `${minutes}:${seconds.toString().padStart(2, "0")}`;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -173,6 +190,12 @@ export default function QuizRouterPage({
             </div>
 
             <div className="w-8 shrink-0"></div>
+            <div className={`hidden sm:flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm font-bold ${
+               timeRemainingMs <= 60000 ? "border-red-500/30 bg-red-500/10 text-red-500" : "border-border bg-background"
+            }`}>
+               <Clock className="h-4 w-4" />
+               {timerLabel}
+            </div>
          </div>
       </div>
 

@@ -172,7 +172,12 @@ export default function CourseDetailPage({ params }: { params: Promise<{ slug: s
                    <p className="text-2xl font-bold">Free</p>
                    <p className="text-sm text-muted-foreground">Full Lifetime Access</p>
                  </div>
-                 <Button className="w-full" size="lg" disabled={isEnrolling} onClick={handleEnroll}>
+                 <Button
+                   className="course-enroll-button w-full !text-white !border-cyan-300/50 !bg-[linear-gradient(90deg,#00e5ff,#b388ff)]"
+                   size="lg"
+                   disabled={isEnrolling}
+                   onClick={handleEnroll}
+                 >
                    {isEnrolling ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : "Enroll Now"}
                  </Button>
                </div>

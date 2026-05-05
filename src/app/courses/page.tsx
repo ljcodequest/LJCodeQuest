@@ -149,7 +149,7 @@ export default function CoursesPage() {
                     </div>
                     
                     <div className="flex items-center justify-between mt-auto">
-                      <Button variant="ghost" className="p-0 h-auto font-semibold text-primary group-hover:translate-x-1 transition-transform">
+                      <Button variant="ghost" className="course-card-action p-0 h-auto font-semibold text-primary group-hover:translate-x-1 transition-transform">
                         View Curriculum <ArrowRight className="ml-2 w-4 h-4" />
                       </Button>
                     </div>

@@ -1,21 +1,15 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Outfit } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { Navbar } from "@/components/layout/navbar";
-import { Footer } from "@/components/layout/footer";
+import { SiteChrome } from "@/components/layout/site-chrome";
 import { AuthProvider } from "@/contexts/AuthContext";
 
-const inter = Inter({
+const outfit = Outfit({
   variable: "--font-sans",
   subsets: ["latin"],
-  display: "swap",
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-mono",
-  subsets: ["latin"],
+  weight: ["200", "300", "400", "500"],
   display: "swap",
 });
 
@@ -50,7 +44,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased scroll-smooth`}
+      className={`${outfit.variable} h-full antialiased scroll-smooth`}
       suppressHydrationWarning
       data-scroll-behavior="smooth"
     >
@@ -63,10 +57,8 @@ export default function RootLayout({
         >
           <AuthProvider>
             <TooltipProvider>
-            <Navbar />
-            <main className="flex-1 pt-16">{children}</main>
-            <Footer />
-          </TooltipProvider>
+              <SiteChrome>{children}</SiteChrome>
+            </TooltipProvider>
           </AuthProvider>
         </ThemeProvider>
       </body>

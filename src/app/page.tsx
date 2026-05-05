@@ -18,21 +18,43 @@ import {
   Sparkles,
 } from "lucide-react";
 import Link from "next/link";
+import { connection } from "next/server";
+import dbConnect from "@/lib/db";
+import { CourseModel } from "@/models";
+
+type HomepageCourse = {
+  title: string;
+  slug: string;
+  difficulty?: "beginner" | "intermediate" | "advanced";
+  language?: string;
+  totalTracks?: number;
+  totalQuestions?: number;
+  tracks?: unknown[];
+};
+
+async function getHomepageCourses(): Promise<HomepageCourse[]> {
+  try {
+    await dbConnect();
+
+    const courses = await CourseModel.find({ isPublished: true })
+      .select("title slug difficulty language totalTracks totalQuestions tracks")
+      .sort({ createdAt: -1 })
+      .limit(6)
+      .lean<HomepageCourse[]>()
+      .exec();
+
+    return courses;
+  } catch (error) {
+    console.error("Failed to load homepage courses", error);
+    return [];
+  }
+}
 
 /* ========== HERO SECTION ========== */
 function HeroSection() {
   return (
-    <section className="relative min-h-[90vh] flex items-center justify-center overflow-hidden">
-      {/* Background Effects */}
-      <div className="absolute inset-0 mesh-gradient" />
-      <div className="absolute inset-0 grid-pattern opacity-50" />
-
-      {/* Floating Orbs */}
-      <div className="absolute top-20 left-10 w-72 h-72 rounded-full bg-brand-cyan/10 blur-3xl animate-float" />
-      <div className="absolute bottom-20 right-10 w-96 h-96 rounded-full bg-brand-purple/10 blur-3xl animate-float delay-300" />
-      <div className="absolute top-40 right-20 w-48 h-48 rounded-full bg-brand-blue/10 blur-3xl animate-float delay-500" />
-
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+    <section className="codequest-hero relative min-h-[90vh] flex items-center justify-center overflow-hidden">
+      <div className="codequest-hero-content relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         {/* Badge */}
         <div className="animate-fade-in-down mb-8">
           <Badge
@@ -45,7 +67,7 @@ function HeroSection() {
         </div>
 
         {/* Headline */}
-        <h1 className="animate-fade-in-up text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight leading-tight mb-6">
+        <h1 className="codequest-hero-title animate-fade-in-up text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight leading-tight mb-6">
           <span className="text-foreground">Level Up Your</span>
           <br />
           <span className="gradient-text">Coding Skills</span>
@@ -85,7 +107,7 @@ function HeroSection() {
         </div>
 
         {/* Quick Stats */}
-        <div className="animate-fade-in-up delay-600 mt-16 grid grid-cols-2 sm:grid-cols-4 gap-6 max-w-3xl mx-auto">
+        <div className="codequest-stats animate-fade-in-up delay-600 mt-16 grid grid-cols-2 sm:grid-cols-4 gap-6 max-w-3xl mx-auto">
           {[
             { value: "500+", label: "Challenges", icon: Target },
             { value: "50+", label: "Learning Tracks", icon: BookOpen },
@@ -126,9 +148,9 @@ const features = [
     title: "AI-Powered Hints",
     description:
       "Stuck on a challenge? Our AI analyzes your code and provides intelligent hints without giving away the answer.",
-    color: "text-brand-purple",
-    bgColor: "bg-brand-purple/10",
-    borderColor: "border-brand-purple/20",
+    color: "text-brand-cyan",
+    bgColor: "bg-brand-cyan/10",
+    borderColor: "border-brand-cyan/20",
   },
   {
     icon: Award,
@@ -162,15 +184,15 @@ const features = [
     title: "Gamification & Streaks",
     description:
       "Earn XP, collect badges, and maintain daily streaks. Stay motivated with our engaging gamification system.",
-    color: "text-brand-pink",
-    bgColor: "bg-brand-pink/10",
-    borderColor: "border-brand-pink/20",
+    color: "text-brand-cyan",
+    bgColor: "bg-brand-cyan/10",
+    borderColor: "border-brand-cyan/20",
   },
 ];
 
 function FeaturesSection() {
   return (
-    <section className="py-24 relative" id="features">
+    <section className="codequest-section py-24 relative" id="features">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center mb-16">
@@ -196,7 +218,7 @@ function FeaturesSection() {
           {features.map((feature) => (
             <div
               key={feature.title}
-              className={`group relative p-6 rounded-2xl border ${feature.borderColor} bg-card card-hover cursor-default`}
+              className={`codequest-card group relative p-6 rounded-2xl border ${feature.borderColor} bg-card card-hover cursor-default`}
             >
               {/* Icon */}
               <div
@@ -226,60 +248,9 @@ function FeaturesSection() {
 }
 
 /* ========== TRACKS SECTION ========== */
-const tracks = [
-  {
-    name: "Java",
-    level: "Beginner → Advanced",
-    modules: 12,
-    challenges: 85,
-    color: "from-orange-500 to-red-600",
-    icon: "☕",
-  },
-  {
-    name: "Python",
-    level: "Beginner → Advanced",
-    modules: 10,
-    challenges: 72,
-    color: "from-blue-500 to-cyan-500",
-    icon: "🐍",
-  },
-  {
-    name: "JavaScript",
-    level: "Beginner → Advanced",
-    modules: 14,
-    challenges: 96,
-    color: "from-yellow-400 to-yellow-600",
-    icon: "⚡",
-  },
-  {
-    name: "C++",
-    level: "Beginner → Advanced",
-    modules: 11,
-    challenges: 78,
-    color: "from-blue-600 to-indigo-700",
-    icon: "⚙️",
-  },
-  {
-    name: "React",
-    level: "Intermediate → Advanced",
-    modules: 8,
-    challenges: 45,
-    color: "from-cyan-400 to-blue-500",
-    icon: "⚛️",
-  },
-  {
-    name: "Data Structures",
-    level: "Beginner → Advanced",
-    modules: 15,
-    challenges: 120,
-    color: "from-green-500 to-emerald-600",
-    icon: "🏗️",
-  },
-];
-
-function TracksSection() {
+function TracksSection({ courses }: { courses: HomepageCourse[] }) {
   return (
-    <section className="py-24 relative gradient-bg-subtle" id="tracks">
+    <section className="codequest-section codequest-section-band py-24 relative gradient-bg-subtle" id="tracks">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center mb-16">
@@ -301,26 +272,43 @@ function TracksSection() {
 
         {/* Track Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {tracks.map((track) => (
+          {courses.length === 0 ? (
+            <div className="codequest-card col-span-full rounded-2xl border border-border bg-card p-8 text-center">
+              <BookOpen className="h-10 w-10 text-brand-cyan mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-foreground mb-2">
+                No learning paths available yet
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Published courses from the database will appear here.
+              </p>
+            </div>
+          ) : courses.map((course) => {
+            const moduleCount = course.totalTracks ?? course.tracks?.length ?? 0;
+            const challengeCount = course.totalQuestions ?? 0;
+            const level = course.difficulty
+              ? course.difficulty.charAt(0).toUpperCase() + course.difficulty.slice(1)
+              : "Learning Path";
+
+            return (
             <div
-              key={track.name}
-              className="group relative overflow-hidden rounded-2xl border border-border bg-card card-hover"
+              key={course.slug}
+              className="codequest-card codequest-track-card group relative overflow-hidden rounded-2xl border border-border bg-card card-hover"
             >
               {/* Gradient Header */}
-              <div
-                className={`h-2 bg-gradient-to-r ${track.color}`}
-              />
+              <div className="h-2 bg-gradient-to-r from-primary to-secondary" />
 
               <div className="p-6">
                 {/* Icon & Name */}
                 <div className="flex items-center gap-3 mb-3">
-                  <span className="text-3xl">{track.icon}</span>
+                  <span className="inline-flex h-12 w-12 items-center justify-center rounded-xl border border-border bg-primary/10 text-primary">
+                    <BookOpen className="h-5 w-5" />
+                  </span>
                   <div>
                     <h3 className="text-lg font-semibold text-foreground">
-                      {track.name}
+                      {course.title}
                     </h3>
                     <span className="text-xs text-muted-foreground">
-                      {track.level}
+                      {course.language ? `${course.language} • ${level}` : level}
                     </span>
                   </div>
                 </div>
@@ -330,29 +318,32 @@ function TracksSection() {
                   <div className="flex items-center gap-1.5">
                     <BookOpen className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm text-muted-foreground">
-                      {track.modules} Modules
+                      {moduleCount} Modules
                     </span>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <Code2 className="h-4 w-4 text-muted-foreground" />
                     <span className="text-sm text-muted-foreground">
-                      {track.challenges} Challenges
+                      {challengeCount} Challenges
                     </span>
                   </div>
                 </div>
 
                 {/* CTA */}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full mt-4 gap-2 group-hover:bg-accent transition-colors"
-                >
-                  Start Track
-                  <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
-                </Button>
+                <Link href={`/courses/${course.slug}`}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full mt-4 gap-2 group-hover:bg-accent transition-colors"
+                  >
+                    Start Track
+                    <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+                  </Button>
+                </Link>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* View All */}
@@ -403,7 +394,7 @@ const steps = [
 
 function HowItWorksSection() {
   return (
-    <section className="py-24 relative" id="how-it-works">
+    <section className="codequest-section py-24 relative" id="how-it-works">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center mb-16">
@@ -433,7 +424,7 @@ function HowItWorksSection() {
                 <div className="hidden lg:block absolute top-12 left-full w-full h-px bg-gradient-to-r from-border to-transparent z-0" />
               )}
 
-              <div className="relative text-center lg:text-left">
+              <div className="codequest-step relative text-center lg:text-left">
                 {/* Step Number */}
                 <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl gradient-bg text-white text-xl font-bold mb-4">
                   {step.step}
@@ -458,7 +449,7 @@ function HowItWorksSection() {
 /* ========== CTA SECTION ========== */
 function CTASection() {
   return (
-    <section className="py-24 relative overflow-hidden">
+    <section className="codequest-final-cta py-24 relative overflow-hidden">
       <div className="absolute inset-0 gradient-bg opacity-90" />
       <div className="absolute inset-0 grid-pattern opacity-20" />
 
@@ -475,7 +466,7 @@ function CTASection() {
           <Link href="/courses">
             <Button
               size="lg"
-              className="h-13 px-8 text-base bg-white text-gray-900 hover:bg-white/90 gap-2 group"
+              className="codequest-cta-primary h-13 px-8 text-base gap-2 group"
               id="cta-get-started"
             >
               Create Free Account
@@ -498,13 +489,16 @@ function CTASection() {
 }
 
 /* ========== MAIN PAGE ========== */
-export default function Home() {
+export default async function Home() {
+  await connection();
+  const courses = await getHomepageCourses();
+
   return (
     <>
       <HeroSection />
-      <FeaturesSection />
-      <TracksSection />
       <HowItWorksSection />
+      <FeaturesSection />
+      <TracksSection courses={courses} />
       <CTASection />
     </>
   );

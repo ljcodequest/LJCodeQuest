@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { CheckCircle2, XCircle, AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -16,16 +16,18 @@ interface MCQComponentProps {
   description: string;
   type: "mcq" | "multi-select";
   options: Option[];
-  onSuccess: (xpEarned: number, data?: any) => void;
+  onSuccess: (xpEarned: number, data?: unknown) => void;
   courseId: string;
+  timeRemainingMs?: number;
 }
 
 export default function MCQComponent({ 
-   questionId, trackId, courseId, title, description, type, options, onSuccess 
+   questionId, trackId, courseId, title, description, type, options, onSuccess, timeRemainingMs 
 }: MCQComponentProps) {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [result, setResult] = useState<{ isCorrect: boolean; xpEarned: number; explanation?: string; progressUpdate?: any } | null>(null);
+  const [result, setResult] = useState<{ isCorrect: boolean; xpEarned: number; explanation?: string; progressUpdate?: unknown } | null>(null);
+  const autoSubmittedRef = useRef(false);
 
   const toggleOption = (id: string) => {
      if (result) return; // Locked after submitting
@@ -41,8 +43,9 @@ export default function MCQComponent({
      }
   };
 
-  const handleSubmit = async () => {
-     if (selectedIds.length === 0) return;
+  const handleSubmit = useCallback(async (force = false) => {
+     if (!force && selectedIds.length === 0) return;
+     if (isSubmitting || result) return;
      setIsSubmitting(true);
 
      try {
@@ -54,7 +57,8 @@ export default function MCQComponent({
              trackId,
              courseId,
              type,
-             selectedOptions: selectedIds
+             selectedOptions: selectedIds,
+             autoSubmitted: force,
           })
        });
 
@@ -69,7 +73,13 @@ export default function MCQComponent({
      } finally {
        setIsSubmitting(false);
      }
-  };
+  }, [courseId, isSubmitting, questionId, result, selectedIds, trackId, type]);
+
+  useEffect(() => {
+     if (timeRemainingMs !== 0 || autoSubmittedRef.current || result) return;
+     autoSubmittedRef.current = true;
+     void handleSubmit(true);
+  }, [handleSubmit, timeRemainingMs, result]);
 
   return (
     <div className="w-full max-w-3xl mx-auto space-y-8">
@@ -118,7 +128,7 @@ export default function MCQComponent({
           <div className="pt-4 flex justify-end">
              <Button 
                 size="lg" 
-                onClick={handleSubmit} 
+                onClick={() => handleSubmit()} 
                 disabled={selectedIds.length === 0 || isSubmitting}
                 className="w-full md:w-auto"
              >

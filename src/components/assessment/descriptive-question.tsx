@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2, Loader2, ArrowRight, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -18,10 +18,11 @@ interface DescriptiveComponentProps {
   starterCode?: string;
   options?: Option[];
   onSuccess: (xpEarned: number, data?: unknown) => void;
+  timeRemainingMs?: number;
 }
 
 export default function DescriptiveComponent({ 
-   questionId, trackId, courseId, title, description, starterCode, options = [], onSuccess 
+   questionId, trackId, courseId, title, description, starterCode, options = [], onSuccess, timeRemainingMs 
 }: DescriptiveComponentProps) {
   
   // Use `starterCode` or fallback to `description`
@@ -54,6 +55,7 @@ export default function DescriptiveComponent({
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [result, setResult] = useState<{ isCorrect: boolean; xpEarned: number; } | null>(null);
+  const autoSubmittedRef = useRef(false);
 
   const [selectedOption, setSelectedOption] = useState<Option | null>(null);
 
@@ -86,8 +88,9 @@ export default function DescriptiveComponent({
 
   const isAllFilled = numBlanks > 0 && Object.keys(filledBlanks).length === numBlanks && Object.values(filledBlanks).every(Boolean);
 
-  const handleSubmit = async () => {
-     if (!isAllFilled) return;
+  const handleSubmit = useCallback(async (force = false) => {
+     if (!force && !isAllFilled) return;
+     if (isSubmitting || result) return;
      setIsSubmitting(true);
 
      try {
@@ -106,7 +109,8 @@ export default function DescriptiveComponent({
              trackId,
              courseId,
              type: "descriptive",
-             descriptiveAnswer
+             descriptiveAnswer,
+             autoSubmitted: force,
           })
        });
 
@@ -121,7 +125,13 @@ export default function DescriptiveComponent({
      } finally {
        setIsSubmitting(false);
      }
-  };
+  }, [courseId, filledBlanks, isAllFilled, isSubmitting, numBlanks, questionId, result, trackId]);
+
+  useEffect(() => {
+     if (timeRemainingMs !== 0 || autoSubmittedRef.current || result) return;
+     autoSubmittedRef.current = true;
+     void handleSubmit(true);
+  }, [handleSubmit, timeRemainingMs, result]);
 
   return (
     <div className="w-full max-w-3xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-2">
@@ -215,7 +225,7 @@ export default function DescriptiveComponent({
           <div className="pt-4 flex justify-end">
              <Button 
                 size="lg" 
-                onClick={handleSubmit} 
+                onClick={() => handleSubmit()} 
                 disabled={!isAllFilled || isSubmitting}
                 className="w-full md:w-auto px-10 h-12 text-lg font-bold shadow-lg"
              >

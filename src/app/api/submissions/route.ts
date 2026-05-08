@@ -9,22 +9,14 @@ import {
   ProgressModel, 
   TrackModel,
   CourseModel,
-  CertificateModel,
   ActivityLogModel
 } from "@/models";
 import { calculateLevel, evaluateStreak } from "@/lib/gamification";
 import { requireActiveAttempt, markAttemptSubmitted } from "@/lib/attempts";
 import { runCodeAgainstTestCases } from "@/lib/code-runner";
-import crypto from "crypto";
+import { issueCourseCertificate } from "@/lib/certificates";
 
 const DIFFICULTY_ORDER = ["beginner", "intermediate", "advanced"] as const;
-
-function createVerificationHash(certificateId: string, userId: string, courseId: string) {
-  return crypto
-    .createHash("sha256")
-    .update(`${certificateId}:${userId}:${courseId}:${process.env.CERTIFICATE_SECRET || "lj-codequest"}`)
-    .digest("hex");
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -32,7 +24,7 @@ export async function POST(request: NextRequest) {
     await dbConnect();
     
     const body = await request.json();
-    const { questionId, trackId, courseId, type, selectedOptions, descriptiveAnswer, code, language } = body;
+    const { questionId, trackId, courseId, type, selectedOptions, descriptiveAnswer, code, language, autoSubmitted } = body;
 
     // 1. Validation
     if (!questionId || !trackId || !courseId || !type) {
@@ -77,6 +69,7 @@ export async function POST(request: NextRequest) {
       courseId,
       trackId,
       question: question as Parameters<typeof requireActiveAttempt>[0]["question"],
+      allowExpiredSubmission: autoSubmitted === true,
     });
 
     // 3. Evaluate
@@ -162,6 +155,7 @@ export async function POST(request: NextRequest) {
     let trackCompleted = false;
     let levelCompleted = false;
     let courseCompleted = false;
+    let certificateAwarded: { certificateId: string; issuedAt: Date } | null = null;
 
     // 5. Progression Side-effects
     if (isCorrect && !existingCorrectScore) {
@@ -242,32 +236,11 @@ export async function POST(request: NextRequest) {
          }
          
          if (courseCompleted) {
-           const certId = `CERT-${Date.now().toString(36).toUpperCase()}`;
-           const verificationHash = createVerificationHash(
-             certId,
-             context.user._id.toString(),
-             course._id.toString()
-           );
-           const cert = await CertificateModel.findOneAndUpdate(
-             { userId: context.user._id, courseId: course._id },
-             {
-               $setOnInsert: {
-                 certificateId: certId,
-                 userId: context.user._id,
-                 courseId: course._id,
-                 issuedAt: new Date(),
-                 status: "active",
-                 verificationHash,
-               },
-             },
-             { new: true, upsert: true }
-           );
            await ProgressModel.updateOne(
              { _id: progress._id },
              {
                isCompleted: true,
                completedAt: new Date(),
-               certificateId: cert._id,
                status: "certified",
              }
            );
@@ -284,9 +257,30 @@ export async function POST(request: NextRequest) {
        const totalCourseQ = await QuestionModel.countDocuments({ trackId: { $in: course.tracks }, isPublished: true });
        const allCompletedQ = await SubmissionModel.distinct("questionId", { userId: context.user._id, courseId, isCorrect: true });
        const percentComplete = totalCourseQ > 0 ? (allCompletedQ.length / totalCourseQ) * 100 : 0;
+       const shouldIssueCertificate = percentComplete >= 100;
+       if (shouldIssueCertificate) {
+         const { certificate, created } = await issueCourseCertificate({
+           userId: context.user._id,
+           courseId: course._id,
+           progressId: progress._id,
+           awardedFor: "course",
+           completedLevels: levelCompleted ? [...(progress.completedLevels || []), track.difficulty] : progress.completedLevels || [],
+         });
+         courseCompleted = true;
+         if (created) {
+           certificateAwarded = {
+             certificateId: certificate.certificateId,
+             issuedAt: certificate.issuedAt,
+           };
+         }
+       }
        await ProgressModel.updateOne(
          { _id: progress._id },
-         { percentComplete, status: courseCompleted ? "certified" : "in-progress" }
+         {
+           percentComplete,
+           status: shouldIssueCertificate ? "certified" : "in-progress",
+           ...(shouldIssueCertificate ? { isCompleted: true, completedAt: new Date() } : {}),
+         }
        );
     }
 
@@ -307,6 +301,7 @@ export async function POST(request: NextRequest) {
         trackCompleted,
         levelCompleted,
         courseCompleted,
+        certificateAwarded,
         nextQuestionOrder,
         percentComplete: finalProgress?.percentComplete || 0
       }

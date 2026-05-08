@@ -74,6 +74,7 @@ export async function GET(
         startedAt: attempt.startedAt,
         expiresAt: attempt.expiresAt,
         timeLimitMinutes: attempt.snapshot.timeLimitMinutes,
+        timeLimitSeconds: attempt.snapshot.timeLimitSeconds || Math.round(attempt.snapshot.timeLimitMinutes * 60),
         timeRemainingMs,
       },
       questionNumber: currentQuestion.order,

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { 
-  Flame, Award, BookOpen, PlayCircle, Trophy, TrendingUp, Sparkles, Loader2 
+  Flame, Award, BookOpen, PlayCircle, Trophy, TrendingUp, Sparkles, Loader2, FileBadge, Download, ShieldCheck
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -17,13 +17,49 @@ interface DashboardData {
     xpNeededForLevel: number;
     progressPercentage: number;
   };
-  enrolledCourses: any[];
-  continueLearning: any | null;
+  enrolledCourses: Array<{
+    _id: string;
+    percentComplete: number;
+    course: {
+      title: string;
+      slug: string;
+      thumbnail?: string;
+      shortDescription?: string;
+    } | null;
+    currentTrack?: {
+      title: string;
+      slug: string;
+    } | null;
+  }>;
+  continueLearning: {
+    percentComplete: number;
+    course: {
+      title: string;
+      slug: string;
+      thumbnail?: string;
+    } | null;
+    currentTrack?: {
+      title: string;
+      slug: string;
+    } | null;
+  } | null;
+  certificates: Array<{
+    _id: string;
+    certificateId: string;
+    issuedAt: string;
+    status: string;
+    course: {
+      title: string;
+      slug: string;
+      thumbnail?: string;
+    } | null;
+  }>;
 }
 
 export default function StudentDashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<"quests" | "certificates">("quests");
 
   useEffect(() => {
     const fetchDashboard = async () => {
@@ -55,7 +91,7 @@ export default function StudentDashboardPage() {
 
   if (!data) return null;
 
-  const { user, enrolledCourses, continueLearning } = data;
+  const { user, enrolledCourses, continueLearning, certificates } = data;
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -99,6 +135,31 @@ export default function StudentDashboardPage() {
       <div className="container mx-auto px-4 lg:px-8 py-8 lg:py-12 grid grid-cols-1 lg:grid-cols-3 gap-10">
          {/* Main Column */}
          <div className="lg:col-span-2 space-y-10">
+            <div className="inline-flex rounded-lg bg-muted p-1">
+               <button
+                  type="button"
+                  onClick={() => setActiveTab("quests")}
+                  className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-semibold transition-colors ${
+                     activeTab === "quests" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  }`}
+               >
+                  <BookOpen className="h-4 w-4" />
+                  Learning
+               </button>
+               <button
+                  type="button"
+                  onClick={() => setActiveTab("certificates")}
+                  className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-semibold transition-colors ${
+                     activeTab === "certificates" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
+                  }`}
+               >
+                  <FileBadge className="h-4 w-4" />
+                  My Certificates
+               </button>
+            </div>
+
+            {activeTab === "quests" ? (
+            <>
             
             {/* Level Progress */}
             <div className="bg-gradient-to-r from-card to-card/50 border border-border rounded-xl p-6 relative overflow-hidden">
@@ -219,6 +280,64 @@ export default function StudentDashboardPage() {
                   </div>
                )}
             </section>
+            </>
+            ) : (
+            <section className="space-y-4">
+               <div>
+                  <h2 className="text-2xl font-bold flex items-center gap-2">
+                     <FileBadge className="w-6 h-6 text-primary" /> My Certificates
+                  </h2>
+                  <p className="mt-1 text-sm text-muted-foreground">Download or verify certificates you have earned.</p>
+               </div>
+
+               {certificates.length === 0 ? (
+                  <div className="text-center py-12 bg-card rounded-xl border border-dashed border-border">
+                     <FileBadge className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
+                     <h3 className="text-lg font-bold">No certificates yet</h3>
+                     <p className="text-muted-foreground text-sm my-2 max-w-sm mx-auto">
+                       Complete every requirement in a course to unlock your first certificate.
+                     </p>
+                  </div>
+               ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                     {certificates.map((certificate) => (
+                        <div key={certificate._id} className="bg-card border border-border rounded-xl p-5 flex flex-col gap-5">
+                           <div className="flex items-start gap-4">
+                              <div className="h-12 w-12 rounded-lg bg-green-500/10 border border-green-500/20 flex items-center justify-center text-green-600 dark:text-green-400 shrink-0">
+                                 <ShieldCheck className="h-6 w-6" />
+                              </div>
+                              <div className="min-w-0">
+                                 <h3 className="font-bold text-lg line-clamp-2">{certificate.course?.title || "Course Certificate"}</h3>
+                                 <p className="text-xs font-mono text-muted-foreground mt-1">{certificate.certificateId}</p>
+                                 <p className="text-xs text-muted-foreground mt-2">
+                                    Issued {new Date(certificate.issuedAt).toLocaleDateString(undefined, {
+                                       year: "numeric",
+                                       month: "short",
+                                       day: "numeric",
+                                    })}
+                                 </p>
+                              </div>
+                           </div>
+
+                           <div className="mt-auto flex gap-3">
+                              {certificate.course?.slug && (
+                                 <Link href={`/courses/${certificate.course.slug}/certificate`} className="flex-1">
+                                    <Button className="w-full gap-2">
+                                       <Download className="h-4 w-4" />
+                                       Download
+                                    </Button>
+                                 </Link>
+                              )}
+                              <Link href={`/verify/${certificate.certificateId}`} className="flex-1">
+                                 <Button variant="outline" className="w-full">Verify</Button>
+                              </Link>
+                           </div>
+                        </div>
+                     ))}
+                  </div>
+               )}
+            </section>
+            )}
          </div>
 
          {/* Right Sidebar */}

@@ -1,4 +1,6 @@
 import { FileBadge } from "lucide-react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 export const metadata = {
   title: "Certificates - LJ CodeQuest",
@@ -11,11 +13,14 @@ export default function CertificatesPage() {
         <FileBadge className="w-12 h-12 text-muted-foreground" />
       </div>
       <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight mb-4">
-        Certifications Coming Soon
+        Your Certificates
       </h1>
       <p className="text-xl text-muted-foreground max-w-lg mb-8">
-        We're working on a feature that lets you claim and share verifiable certificates for tracks you've passed. Keep coding!
+        Certificates are issued automatically when you complete every course requirement. Open your dashboard to download and verify earned awards.
       </p>
+      <Link href="/dashboard">
+        <Button>Open Dashboard</Button>
+      </Link>
     </div>
   );
 }

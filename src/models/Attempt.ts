@@ -18,6 +18,7 @@ export interface IAttempt extends Document {
     questionOrder: number;
     points: number;
     timeLimitMinutes: number;
+    timeLimitSeconds?: number;
   };
   createdAt: Date;
   updatedAt: Date;
@@ -47,6 +48,7 @@ const attemptSchema = new Schema<IAttempt>(
       questionOrder: { type: Number, required: true },
       points: { type: Number, required: true, default: 100 },
       timeLimitMinutes: { type: Number, required: true },
+      timeLimitSeconds: { type: Number },
     },
   },
   {

@@ -4,7 +4,14 @@ import type { IQuestion } from "@/models/Question";
 import { ApiRouteError } from "@/lib/api";
 import { AttemptModel } from "@/models";
 
-const DEFAULT_QUESTION_TIME_LIMIT_MINUTES = 10;
+export const QUESTION_TIME_LIMIT_SECONDS: Record<IQuestion["type"], number> = {
+  mcq: 60,
+  "multi-select": 120,
+  descriptive: 210,
+  coding: 360,
+};
+
+const DEFAULT_QUESTION_TIME_LIMIT_SECONDS = QUESTION_TIME_LIMIT_SECONDS.mcq;
 
 function getClientIp(request: Request) {
   return (
@@ -14,14 +21,12 @@ function getClientIp(request: Request) {
   );
 }
 
-export function getQuestionTimeLimitMinutes(question: Pick<IQuestion, "timeLimit">) {
-  const minutes = Number(question.timeLimit);
+export function getQuestionTimeLimitSeconds(question: Pick<IQuestion, "type">) {
+  return QUESTION_TIME_LIMIT_SECONDS[question.type] || DEFAULT_QUESTION_TIME_LIMIT_SECONDS;
+}
 
-  if (!Number.isFinite(minutes) || minutes < 1) {
-    return DEFAULT_QUESTION_TIME_LIMIT_MINUTES;
-  }
-
-  return Math.floor(minutes);
+export function getQuestionTimeLimitMinutes(question: Pick<IQuestion, "type">) {
+  return getQuestionTimeLimitSeconds(question) / 60;
 }
 
 export async function getOrCreateActiveAttempt(options: {
@@ -30,6 +35,7 @@ export async function getOrCreateActiveAttempt(options: {
   courseId: Types.ObjectId | string;
   trackId: Types.ObjectId | string;
   question: IQuestion & { _id: Types.ObjectId | string };
+  allowExpiredSubmission?: boolean;
 }) {
   const now = new Date();
   const existingAttempt = await AttemptModel.findOne({
@@ -40,6 +46,15 @@ export async function getOrCreateActiveAttempt(options: {
 
   if (existingAttempt) {
     if (existingAttempt.expiresAt.getTime() <= now.getTime()) {
+      if (options.allowExpiredSubmission) {
+        existingAttempt.status = "timed_out";
+        existingAttempt.submittedAt = now;
+        existingAttempt.durationMs =
+          now.getTime() - existingAttempt.startedAt.getTime();
+        await existingAttempt.save();
+        return existingAttempt;
+      }
+
       existingAttempt.status = "timed_out";
       existingAttempt.submittedAt = now;
       existingAttempt.durationMs =
@@ -56,9 +71,10 @@ export async function getOrCreateActiveAttempt(options: {
     return existingAttempt;
   }
 
-  const timeLimitMinutes = getQuestionTimeLimitMinutes(options.question);
+  const timeLimitSeconds = getQuestionTimeLimitSeconds(options.question);
+  const timeLimitMinutes = timeLimitSeconds / 60;
   const startedAt = now;
-  const expiresAt = new Date(startedAt.getTime() + timeLimitMinutes * 60 * 1000);
+  const expiresAt = new Date(startedAt.getTime() + timeLimitSeconds * 1000);
 
   return AttemptModel.create({
     userId: options.userId,
@@ -76,6 +92,7 @@ export async function getOrCreateActiveAttempt(options: {
       questionOrder: options.question.order,
       points: 100,
       timeLimitMinutes,
+      timeLimitSeconds,
     },
   });
 }
@@ -86,6 +103,7 @@ export async function requireActiveAttempt(options: {
   courseId: Types.ObjectId | string;
   trackId: Types.ObjectId | string;
   question: IQuestion & { _id: Types.ObjectId | string };
+  allowExpiredSubmission?: boolean;
 }) {
   return getOrCreateActiveAttempt(options);
 }

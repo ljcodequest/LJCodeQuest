@@ -2,14 +2,7 @@ import { NextResponse } from "next/server";
 import { requireRegisteredUser } from "@/lib/auth";
 import dbConnect from "@/lib/db";
 import { CertificateModel, ProgressModel } from "@/models";
-import crypto from "crypto";
-
-function createVerificationHash(certificateId: string, userId: string, courseId: string) {
-  return crypto
-    .createHash("sha256")
-    .update(`${certificateId}:${userId}:${courseId}:${process.env.CERTIFICATE_SECRET || "lj-codequest"}`)
-    .digest("hex");
-}
+import { issueCourseCertificate } from "@/lib/certificates";
 
 function getRouteError(error: unknown) {
   if (error instanceof Error) {
@@ -54,31 +47,12 @@ export async function POST(request: Request) {
        });
     }
 
-    // Generate unique Certificate ID: LJCQ-[YEAR]-[RANDOM_HEX_6_CHARS]
-    const year = new Date().getFullYear();
-    const randomHash = crypto.randomBytes(3).toString("hex").toUpperCase();
-    const certificateId = `LJCQ-${year}-${randomHash}`;
-    const verificationHash = createVerificationHash(
-       certificateId,
-       context.user._id.toString(),
-       courseId
-    );
-
-    const newCertificate = await CertificateModel.create({
-       certificateId,
+    const { certificate: newCertificate } = await issueCourseCertificate({
        userId: context.user._id,
        courseId,
-       status: "active",
-       verificationHash,
-       metadata: {
-          awardedFor: progress.isCompleted ? "course" : "beginner-level",
-          completedLevels: progress.completedLevels || [],
-       },
-    });
-
-    await ProgressModel.findByIdAndUpdate(progress._id, {
-       certificateId: newCertificate._id,
-       status: progress.isCompleted ? "certified" : "passed",
+       progressId: progress._id,
+       awardedFor: progress.isCompleted ? "course" : "beginner-level",
+       completedLevels: progress.completedLevels || [],
     });
 
     return NextResponse.json({ 

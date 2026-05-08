@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, use } from "react";
+import { useCallback, useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Loader2, Trophy, ArrowRight, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,38 @@ import Link from "next/link";
 import MCQComponent from "@/components/assessment/mcq-question";
 import DescriptiveComponent from "@/components/assessment/descriptive-question";
 import CodingComponent from "@/components/assessment/coding-question";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
+type QuestionOption = {
+  id: string;
+  text: string;
+};
+
+type CurrentQuestion = {
+  _id: string;
+  trackId?: string;
+  type: "mcq" | "multi-select" | "descriptive" | "coding";
+  title: string;
+  description: string;
+  options?: QuestionOption[];
+  starterCode?: string;
+  language?: string;
+  testCases?: Array<{
+    input: string;
+    expectedOutput: string;
+    isHidden: boolean;
+  }>;
+};
+
+type ActiveAttempt = {
+  expiresAt: string;
+  timeRemainingMs?: number;
+};
+
+type SubmissionProgressUpdate = {
+  trackCompleted?: boolean;
+  certificateAwarded?: { certificateId: string; issuedAt: string };
+};
 
 export default function QuizRouterPage({ 
    params 
@@ -18,17 +50,18 @@ export default function QuizRouterPage({
   const router = useRouter();
 
   const [isLoading, setIsLoading] = useState(true);
-  const [currentQuestion, setCurrentQuestion] = useState<any>(null);
+  const [currentQuestion, setCurrentQuestion] = useState<CurrentQuestion | null>(null);
   const [questionStats, setQuestionStats] = useState({ number: 1, total: 1 });
   const [trackId, setTrackId] = useState<string>("");
   const [courseId, setCourseId] = useState<string>("");
-  const [attempt, setAttempt] = useState<any>(null);
+  const [attempt, setAttempt] = useState<ActiveAttempt | null>(null);
   const [timeRemainingMs, setTimeRemainingMs] = useState(0);
   
   const [totalXpEarned, setTotalXpEarned] = useState(0);
   const [isFinished, setIsFinished] = useState(false);
+  const [awardedCertificate, setAwardedCertificate] = useState<{ certificateId: string; issuedAt: string } | null>(null);
 
-  const fetchNextQuestion = async () => {
+  const fetchNextQuestion = useCallback(async () => {
     setIsLoading(true);
     try {
       // Assuming courseId might be needed, but we can pass courseSlug to API or fetch from track
@@ -44,7 +77,7 @@ export default function QuizRouterPage({
             setCurrentQuestion(json.data.question);
             setQuestionStats({ number: json.data.questionNumber, total: json.data.totalQuestions });
             setTrackId(json.data.trackId || json.data.question.trackId);
-            setCourseId(json.data.courseId || courseId);
+            setCourseId(json.data.courseId || "");
             setAttempt(json.data.attempt);
             setTimeRemainingMs(json.data.attempt?.timeRemainingMs || 0);
          } else {
@@ -63,24 +96,11 @@ export default function QuizRouterPage({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [courseSlug, router, trackSlug]);
 
   useEffect(() => {
-    // Also fetch courseId to pass to submission components
-    const init = async () => {
-      try {
-        const cRes = await fetch(`/api/courses/${courseSlug}`);
-        const cJson = await cRes.json();
-        if (cJson.success && cJson.data.course) {
-           setCourseId(cJson.data.course._id);
-        }
-      } catch (e) {
-        console.error(e);
-      }
-      await fetchNextQuestion();
-    };
-    init();
-  }, [courseSlug, trackSlug, router]);
+    void fetchNextQuestion();
+  }, [fetchNextQuestion]);
 
   useEffect(() => {
     if (!attempt?.expiresAt) return;
@@ -97,10 +117,16 @@ export default function QuizRouterPage({
     return () => window.clearInterval(interval);
   }, [attempt?.expiresAt]);
 
-  const handleNextQuestion = (xpEarned: number, submissionData?: any) => {
+  const handleNextQuestion = (xpEarned: number, submissionData?: unknown) => {
+     const progressUpdate = (submissionData as { progressUpdate?: SubmissionProgressUpdate } | undefined)?.progressUpdate;
      setTotalXpEarned(prev => prev + xpEarned);
+     if (progressUpdate?.certificateAwarded) {
+        setAwardedCertificate(progressUpdate.certificateAwarded);
+        setIsFinished(true);
+        return;
+     }
      
-     if (submissionData?.progressUpdate?.trackCompleted) {
+     if (progressUpdate?.trackCompleted) {
         setIsFinished(true);
      } else {
         fetchNextQuestion();
@@ -120,7 +146,7 @@ export default function QuizRouterPage({
          <div className="min-h-screen flex flex-col items-center justify-center bg-background space-y-4">
             <Trophy className="w-16 h-16 text-muted-foreground" />
             <h1 className="text-2xl font-bold">No questions available</h1>
-            <p className="text-muted-foreground">This track doesn't have an assessment yet.</p>
+            <p className="text-muted-foreground">This track does not have an assessment yet.</p>
             <Button onClick={() => router.push(`/learn/${courseSlug}/tracks/${trackSlug}`)}>
                Go Back
             </Button>
@@ -131,6 +157,25 @@ export default function QuizRouterPage({
   if (isFinished) {
       return (
          <div className="min-h-screen flex flex-col items-center justify-center bg-background p-4">
+            <Dialog open={!!awardedCertificate} onOpenChange={(open) => !open && setAwardedCertificate(null)}>
+               <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                     <DialogTitle className="text-2xl font-bold">Certificate Unlocked</DialogTitle>
+                     <DialogDescription>
+                        Congratulations! Your course certificate is ready and has been saved to your dashboard.
+                     </DialogDescription>
+                  </DialogHeader>
+                  <div className="rounded-lg border border-green-500/20 bg-green-500/10 p-4">
+                     <p className="text-xs font-bold uppercase tracking-widest text-green-600 dark:text-green-400">Certificate ID</p>
+                     <p className="mt-1 font-mono text-lg font-bold">{awardedCertificate?.certificateId}</p>
+                  </div>
+                  <DialogFooter>
+                     <Link href={`/courses/${courseSlug}/certificate`} className="w-full sm:w-auto">
+                        <Button className="w-full">Download Certificate</Button>
+                     </Link>
+                  </DialogFooter>
+               </DialogContent>
+            </Dialog>
             <div className="max-w-md w-full bg-card border border-border p-8 rounded-2xl text-center space-y-6 shadow-xl relative overflow-hidden">
                <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-primary to-purple-500"></div>
                
@@ -156,10 +201,18 @@ export default function QuizRouterPage({
                      <Button className="w-full gap-2">Course Home <ArrowRight className="w-4 h-4" /></Button>
                   </Link>
                </div>
+               {awardedCertificate && (
+                  <Link href={`/courses/${courseSlug}/certificate`}>
+                     <Button className="w-full">Download Certificate</Button>
+                  </Link>
+               )}
             </div>
          </div>
       );
   }
+
+  const question = currentQuestion;
+  if (!question) return null;
 
   const progressPercent = ((questionStats.number - 1) / questionStats.total) * 100;
   const minutes = Math.floor(timeRemainingMs / 60000);
@@ -200,41 +253,44 @@ export default function QuizRouterPage({
       </div>
 
       <div className="flex-1 container mx-auto px-4 py-8 md:py-12">
-         {currentQuestion.type === "mcq" || currentQuestion.type === "multi-select" ? (
+         {question.type === "mcq" || question.type === "multi-select" ? (
             <MCQComponent 
-               key={currentQuestion._id}
-               questionId={currentQuestion._id}
+               key={question._id}
+               questionId={question._id}
                trackId={trackId}
                courseId={courseId}
-               title={currentQuestion.title}
-               description={currentQuestion.description}
-               type={currentQuestion.type}
-               options={currentQuestion.options}
+               title={question.title}
+               description={question.description}
+               type={question.type}
+               options={question.options || []}
                onSuccess={handleNextQuestion}
+               timeRemainingMs={timeRemainingMs}
             />
-         ) : currentQuestion.type === "descriptive" ? (
+         ) : question.type === "descriptive" ? (
             <DescriptiveComponent
-               key={currentQuestion._id}
-               questionId={currentQuestion._id}
+               key={question._id}
+               questionId={question._id}
                trackId={trackId}
                courseId={courseId}
-               title={currentQuestion.title}
-               description={currentQuestion.description}
-               starterCode={currentQuestion.starterCode}
-               options={currentQuestion.options}
+               title={question.title}
+               description={question.description}
+               starterCode={question.starterCode}
+               options={question.options || []}
                onSuccess={handleNextQuestion}
+               timeRemainingMs={timeRemainingMs}
             />
-         ) : currentQuestion.type === "coding" ? (
+         ) : question.type === "coding" ? (
             <CodingComponent
-               key={currentQuestion._id}
-               questionId={currentQuestion._id}
+               key={question._id}
+               questionId={question._id}
                trackId={trackId}
                courseId={courseId}
-               title={currentQuestion.title}
-               description={currentQuestion.description}
-               language={currentQuestion.language || "javascript"}
-               testCases={currentQuestion.testCases || []}
+               title={question.title}
+               description={question.description}
+               language={question.language || "javascript"}
+               testCases={question.testCases || []}
                onSuccess={handleNextQuestion}
+               timeRemainingMs={timeRemainingMs}
             />
          ) : (
             <div>Unknown Question Type</div>

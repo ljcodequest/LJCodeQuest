@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Editor from "@monaco-editor/react";
 import { Play, CheckCircle2, XCircle, Terminal, Loader2, AlertCircle, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -34,20 +34,22 @@ interface CodingComponentProps {
   description: string;
   language: string;
   testCases: TestCase[];
-  onSuccess: (xpEarned: number, data?: any) => void;
+  onSuccess: (xpEarned: number, data?: unknown) => void;
   courseId: string;
+  timeRemainingMs?: number;
 }
 
 export default function CodingComponent({ 
-   questionId, trackId, courseId, title, description, language, testCases, onSuccess 
+   questionId, trackId, courseId, title, description, language, testCases, onSuccess, timeRemainingMs 
 }: CodingComponentProps) {
   const [code, setCode] = useState("");
   const [isExecuting, setIsExecuting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [executionData, setExecutionData] = useState<CodeSubmissionResult | null>(null);
-  const [finalResult, setFinalResult] = useState<{ isCorrect: boolean; xpEarned: number; progressUpdate?: any } | null>(null);
+  const [finalResult, setFinalResult] = useState<{ isCorrect: boolean; xpEarned: number; progressUpdate?: unknown } | null>(null);
   const [isGeneratingHint, setIsGeneratingHint] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
+  const autoSubmittedRef = useRef(false);
 
   const mappedLanguage = language.toLowerCase() === "python" ? "python" :
                          language.toLowerCase() === "javascript" ? "javascript" :
@@ -83,12 +85,13 @@ export default function CodingComponent({
      }
   };
 
-  const handleSubmit = async () => {
-     if (!executionData || !executionData.passed) {
+  const handleSubmit = useCallback(async (force = false) => {
+     if (!force && (!executionData || !executionData.passed)) {
         alert("You must pass all test cases by running your code first!");
         return;
      }
 
+     if (isSubmitting || finalResult) return;
      setIsSubmitting(true);
      try {
        const res = await fetch("/api/submissions", {
@@ -100,7 +103,8 @@ export default function CodingComponent({
              courseId,
              type: "coding",
              code,
-             language: mappedLanguage
+             language: mappedLanguage,
+             autoSubmitted: force,
           })
        });
 
@@ -115,7 +119,13 @@ export default function CodingComponent({
      } finally {
        setIsSubmitting(false);
      }
-  };
+  }, [code, courseId, executionData, finalResult, isSubmitting, mappedLanguage, questionId, trackId]);
+
+  useEffect(() => {
+     if (timeRemainingMs !== 0 || autoSubmittedRef.current || finalResult) return;
+     autoSubmittedRef.current = true;
+     void handleSubmit(true);
+  }, [handleSubmit, timeRemainingMs, finalResult]);
 
   const handleGetHint = async () => {
      setIsGeneratingHint(true);
@@ -304,7 +314,7 @@ export default function CodingComponent({
              </Button>
              
              <Button 
-                onClick={handleSubmit}
+                onClick={() => handleSubmit()}
                 disabled={!executionData?.passed || isSubmitting || !!finalResult}
                 className={`gap-2 shadow-lg transition-all ${executionData?.passed ? 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white shadow-green-500/20' : ''}`}
              >

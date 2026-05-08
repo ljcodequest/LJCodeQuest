@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
 import { requireRegisteredUser } from "@/lib/auth";
 import dbConnect from "@/lib/db";
-import { UserModel, ProgressModel, CourseModel, TrackModel } from "@/models";
+import { UserModel, ProgressModel, CertificateModel } from "@/models";
 import { evaluateStreak, getLevelProgress } from "@/lib/gamification";
+
+type LeanRecord = Record<string, unknown>;
 
 export async function GET(request: Request) {
   try {
@@ -41,10 +43,26 @@ export async function GET(request: Request) {
       .sort({ lastActiveAt: -1 }) // Most recently active first
       .lean();
 
-    const formattedProgress = progressDocs.map((p: any) => ({
+    const formattedProgress = progressDocs.map((p) => ({
       ...p,
-      course: p.courseId,
-      currentTrack: p.currentTrackId,
+      course: (p as unknown as LeanRecord).courseId,
+      currentTrack: (p as unknown as LeanRecord).currentTrackId,
+    }));
+
+    const certificateDocs = await CertificateModel.find({
+      userId: user._id,
+      status: "active",
+    })
+      .populate("courseId", "title slug thumbnail")
+      .sort({ issuedAt: -1 })
+      .lean();
+
+    const certificates = certificateDocs.map((certificate) => ({
+      _id: certificate._id,
+      certificateId: certificate.certificateId,
+      issuedAt: certificate.issuedAt,
+      status: certificate.status,
+      course: (certificate as unknown as LeanRecord).courseId,
     }));
 
     return NextResponse.json({ 
@@ -58,10 +76,13 @@ export async function GET(request: Request) {
            ...levelStats
         },
         enrolledCourses: formattedProgress,
-        continueLearning: formattedProgress.length > 0 ? formattedProgress[0] : null
+        continueLearning: formattedProgress.length > 0 ? formattedProgress[0] : null,
+        certificates,
       } 
     });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: error.status || 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Failed to load dashboard";
+    const status = typeof error === "object" && error !== null && "status" in error ? Number(error.status) : 500;
+    return NextResponse.json({ success: false, error: message }, { status: status || 500 });
   }
 }

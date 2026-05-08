@@ -13,7 +13,8 @@ import {
   User,
   LogIn,
   LogOut,
-  LayoutDashboard
+  LayoutDashboard,
+  ShieldCheck
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -45,6 +46,7 @@ export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const { user, logout, loading } = useAuth();
   const router = useRouter();
+  const isAdmin = user?.email?.toLowerCase() === "lhcodequest@gmail.com";
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50 glass border-b border-border/40">
@@ -111,6 +113,12 @@ export function Navbar() {
                       <LayoutDashboard className="mr-2 h-4 w-4" />
                       <span>Dashboard</span>
                     </DropdownMenuItem>
+                    {isAdmin && (
+                      <DropdownMenuItem className="cursor-pointer" onClick={() => router.push("/admin")}>
+                        <ShieldCheck className="mr-2 h-4 w-4" />
+                        <span>Admin Panel</span>
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuItem className="cursor-pointer" onClick={() => router.push("/profile")}>
                       <User className="mr-2 h-4 w-4" />
                       <span>Profile</span>
@@ -181,14 +189,26 @@ export function Navbar() {
                     ))}
                     
                     {user && (
-                       <Link
-                         href="/dashboard"
-                         onClick={() => setIsOpen(false)}
-                         className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-all duration-200"
-                       >
-                         <LayoutDashboard className="h-5 w-5" />
-                         Dashboard
-                       </Link>
+                      <>
+                        <Link
+                          href="/dashboard"
+                          onClick={() => setIsOpen(false)}
+                          className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-all duration-200"
+                        >
+                          <LayoutDashboard className="h-5 w-5" />
+                          Dashboard
+                        </Link>
+                        {isAdmin && (
+                          <Link
+                            href="/admin"
+                            onClick={() => setIsOpen(false)}
+                            className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-all duration-200"
+                          >
+                            <ShieldCheck className="h-5 w-5" />
+                            Admin Panel
+                          </Link>
+                        )}
+                      </>
                     )}
                   </div>
 

@@ -17,7 +17,7 @@ interface DescriptiveComponentProps {
   description: string;
   starterCode?: string;
   options?: Option[];
-  onSuccess: (xpEarned: number, data?: any) => void;
+  onSuccess: (xpEarned: number, data?: unknown) => void;
 }
 
 export default function DescriptiveComponent({ 
@@ -160,7 +160,7 @@ export default function DescriptiveComponent({
                                         : result && !result.isCorrect && blankItem
                                         ? 'bg-red-500/20 border-red-500/50 text-red-400'
                                         : blankItem
-                                             ? 'bg-primary/20 border-primary cursor-pointer text-primary-foreground hover:bg-primary/30'
+                                             ? 'bg-primary/20 border-primary cursor-pointer text-foreground hover:bg-primary/30'
                                              : isSelectedBlank
                                                  ? 'bg-neutral-800 border-primary border-dashed cursor-pointer animate-pulse shadow-[0_0_15px_rgba(var(--primary),0.3)]'
                                                  : 'bg-neutral-800 border-neutral-600 border-dashed cursor-pointer hover:border-neutral-400'
@@ -243,7 +243,7 @@ export default function DescriptiveComponent({
 
                 <div className="flex justify-end pt-4">
                    {result.isCorrect ? (
-                       <Button size="lg" onClick={() => onSuccess(result.xpEarned, result)} className="gap-2 bg-primary text-white font-bold px-8">
+                       <Button size="lg" onClick={() => onSuccess(result.xpEarned, result)} className="gap-2 font-bold px-8">
                           Continue <ArrowRight className="w-5 h-5" />
                        </Button>
                    ) : (

@@ -84,7 +84,7 @@
   --muted-foreground: #a1a1aa;
   --accent: rgba(0, 229, 255, 0.08);
   --accent-foreground: #ffffff;
-  --destructive: #a1a1aa;
+  --destructive: #f87171;
   --border: rgba(255, 255, 255, 0.08);
   --input: rgba(255, 255, 255, 0.1);
   --ring: #00e5ff;
@@ -120,7 +120,7 @@
   --muted-foreground: #a1a1aa;
   --accent: rgba(0, 229, 255, 0.08);
   --accent-foreground: #ffffff;
-  --destructive: #a1a1aa;
+  --destructive: #f87171;
   --border: rgba(255, 255, 255, 0.08);
   --input: rgba(255, 255, 255, 0.1);
   --ring: #00e5ff;
@@ -447,7 +447,7 @@
   --border: rgba(255, 255, 255, 0.08);
   --input: rgba(255, 255, 255, 0.1);
   --ring: #00e5ff;
-  --destructive: #a1a1aa;
+  --destructive: #f87171;
   --chart-1: #00e5ff;
   --chart-2: #00e5ff;
   --chart-3: #ffffff;
@@ -481,7 +481,7 @@
   --border: rgba(255, 255, 255, 0.08);
   --input: rgba(255, 255, 255, 0.1);
   --ring: #00e5ff;
-  --destructive: #a1a1aa;
+  --destructive: #f87171;
   --chart-1: #00e5ff;
   --chart-2: #00e5ff;
   --chart-3: #ffffff;
@@ -1337,153 +1337,38 @@ h6 {
   font-weight: 300 !important;
 }
 
-[class*="text-slate"],
-[class*="text-gray"],
-[class*="text-zinc"],
-[class*="text-neutral"],
-[class*="text-[#"] {
-  color: #a1a1aa !important;
-}
-
-[class*="text-green"],
-[class*="text-blue"],
-[class*="text-cyan"],
-[class*="text-emerald"] {
-  color: #00e5ff !important;
-}
-
-[class*="text-purple"],
-[class*="text-indigo"],
-[class*="text-pink"] {
-  color: #00e5ff !important;
-}
-
-[class*="text-red"],
-[class*="text-yellow"],
-[class*="text-amber"],
-[class*="text-orange"],
+/* Preserve Tailwind semantic utilities. The previous template lock rewrote every
+   color utility to cyan/gray, which hid button labels and status badges. */
 .text-destructive {
-  color: #a1a1aa !important;
+  color: #f87171 !important;
 }
 
-[class*="bg-slate"],
-[class*="bg-gray"],
-[class*="bg-zinc"],
-[class*="bg-neutral"],
-[class*="bg-[#"] {
-  background-color: rgba(15, 15, 18, 0.46) !important;
-}
-
-[class*="bg-green"],
-[class*="bg-blue"],
-[class*="bg-cyan"],
-[class*="bg-emerald"] {
-  background-color: rgba(0, 229, 255, 0.09) !important;
-}
-
-[class*="bg-purple"],
-[class*="bg-indigo"],
-[class*="bg-pink"] {
-  background-color: rgba(0, 229, 255, 0.1) !important;
-}
-
-[class*="bg-red"],
-[class*="bg-yellow"],
-[class*="bg-amber"],
-[class*="bg-orange"],
 .bg-destructive {
-  background-color: rgba(161, 161, 170, 0.1) !important;
+  background-color: rgba(248, 113, 113, 0.14) !important;
 }
 
-[class*="border-green"],
-[class*="border-blue"],
-[class*="border-cyan"],
-[class*="border-emerald"] {
-  border-color: rgba(0, 229, 255, 0.28) !important;
-}
-
-[class*="border-purple"],
-[class*="border-indigo"],
-[class*="border-pink"] {
-  border-color: rgba(0, 229, 255, 0.28) !important;
-}
-
-[class*="border-red"],
-[class*="border-yellow"],
-[class*="border-amber"],
-[class*="border-orange"],
-[class*="border-slate"],
-[class*="border-gray"],
-[class*="border-zinc"],
-[class*="border-neutral"],
-[class*="border-[#"],
 .border-destructive {
-  border-color: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(248, 113, 113, 0.4) !important;
 }
 
-[class*="from-green"],
-[class*="from-blue"],
-[class*="from-cyan"],
-[class*="from-emerald"],
-[class*="from-orange"],
-[class*="from-yellow"],
-[class*="from-amber"],
-[class*="from-red"],
-[class*="from-primary"] {
-  --tw-gradient-from: #00e5ff var(--tw-gradient-from-position) !important;
-  --tw-gradient-to: rgba(0, 229, 255, 0) var(--tw-gradient-to-position) !important;
-  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+[data-slot="button"].bg-primary,
+[data-slot="button"].gradient-bg,
+button.bg-primary,
+button.gradient-bg {
+  color: var(--primary-foreground) !important;
 }
 
-[class*="from-[#"],
-[class*="via-[#"] {
-  --tw-gradient-from: #00e5ff var(--tw-gradient-from-position) !important;
-  --tw-gradient-via: rgba(0, 229, 255, 0.5) var(--tw-gradient-via-position) !important;
-  --tw-gradient-to: rgba(0, 229, 255, 0) var(--tw-gradient-to-position) !important;
+[data-slot="button"]:disabled {
+  opacity: 1 !important;
+  color: #c4c4cc !important;
+  background: rgba(255, 255, 255, 0.075) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
 }
 
-[class*="to-purple"],
-[class*="to-indigo"],
-[class*="to-pink"],
-[class*="to-blue"],
-[class*="to-cyan"],
-[class*="to-green"],
-[class*="to-emerald"],
-[class*="to-orange"],
-[class*="to-yellow"],
-[class*="to-amber"],
-[class*="to-red"],
-[class*="to-secondary"] {
-  --tw-gradient-to: #00e5ff var(--tw-gradient-to-position) !important;
-}
-
-[class*="to-[#"] {
-  --tw-gradient-to: #00e5ff var(--tw-gradient-to-position) !important;
-}
-
-[class*="via-purple"],
-[class*="via-indigo"],
-[class*="via-pink"],
-[class*="via-blue"],
-[class*="via-cyan"],
-[class*="via-green"],
-[class*="via-emerald"],
-[class*="via-orange"],
-[class*="via-yellow"],
-[class*="via-amber"],
-[class*="via-red"] {
-  --tw-gradient-via: rgba(0, 229, 255, 0.5) var(--tw-gradient-via-position) !important;
-}
-
-[class*="fill-green"],
-[class*="fill-blue"],
-[class*="fill-cyan"],
-[class*="fill-emerald"],
-[class*="fill-orange"],
-[class*="fill-yellow"],
-[class*="fill-amber"],
-[class*="fill-red"] {
-  fill: #00e5ff !important;
+[data-slot="button"]:disabled svg {
+  color: #c4c4cc !important;
 }
 
 .codequest-track-card span.text-3xl {

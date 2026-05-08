@@ -57,9 +57,10 @@ export async function GET(
        }
     }
 
+    const tracks = (course.tracks || []) as unknown as CourseTrackSummary[];
     const sortedCourse = {
       ...course,
-      tracks: [...((course.tracks || []) as CourseTrackSummary[])].sort((a, b) => {
+      tracks: [...tracks].sort((a, b) => {
         const difficultyDelta =
           DIFFICULTY_ORDER.indexOf(a.difficulty) - DIFFICULTY_ORDER.indexOf(b.difficulty);
         return difficultyDelta || a.order - b.order;

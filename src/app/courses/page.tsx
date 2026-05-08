@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Search, BookOpen, Clock, BarChart, ArrowRight } from "lucide-react";
+import { Search, BookOpen, ArrowRight, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 
 interface Course {
   _id: string;
@@ -15,6 +16,11 @@ interface Course {
   tags: string[];
   thumbnail?: string;
   estimatedHours: number;
+  progress?: {
+    status: string;
+    percentComplete: number;
+    isCompleted: boolean;
+  } | null;
 }
 
 export default function CoursesPage() {
@@ -27,7 +33,6 @@ export default function CoursesPage() {
     const fetchCourses = async () => {
       try {
         setIsLoading(true);
-        // Note: We need to implement /api/courses to fetch public courses
         const res = await fetch("/api/courses");
         const data = await res.json();
         if (data.success) {
@@ -107,56 +112,90 @@ export default function CoursesPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredCourses.map(course => (
-              <Link key={course._id} href={`/courses/${course.slug}`}>
-                <div className="bg-card group hover:-translate-y-1 transition-all duration-300 h-full rounded-xl border border-border overflow-hidden flex flex-col hover:shadow-lg hover:shadow-primary/5">
-                  <div className="h-48 bg-muted relative overflow-hidden">
-                    {course.thumbnail ? (
-                      <img src={course.thumbnail} alt={course.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-secondary/20 group-hover:scale-105 transition-transform duration-500">
-                         <BookOpen className="w-12 h-12 text-primary/50" />
+            {filteredCourses.map(course => {
+              const percentComplete = Math.round(course.progress?.percentComplete ?? 0);
+              const isDone = Boolean(course.progress?.isCompleted) || percentComplete >= 100;
+              const isStarted = Boolean(course.progress);
+
+              return (
+                <Link key={course._id} href={`/courses/${course.slug}`}>
+                  <div className="bg-card group hover:-translate-y-1 transition-all duration-300 h-full rounded-xl border border-border overflow-hidden flex flex-col hover:shadow-lg hover:shadow-primary/5">
+                    <div className="h-48 bg-muted relative overflow-hidden">
+                      {course.thumbnail ? (
+                        <img src={course.thumbnail} alt={course.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      ) : (
+                        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 to-secondary/20 group-hover:scale-105 transition-transform duration-500">
+                           <BookOpen className="w-12 h-12 text-primary/50" />
+                        </div>
+                      )}
+                      <div className="absolute top-4 right-4">
+                        <Badge className={`uppercase text-[10px] tracking-wider font-bold ${
+                          course.difficulty === 'beginner' ? 'bg-green-500 hover:bg-green-600' :
+                          course.difficulty === 'intermediate' ? 'bg-yellow-500 hover:bg-yellow-600 font-bold text-black' :
+                          'bg-red-500 hover:bg-red-600 font-bold text-white'
+                        }`}>
+                          {course.difficulty}
+                        </Badge>
                       </div>
-                    )}
-                    <div className="absolute top-4 right-4">
-                      <Badge className={`uppercase text-[10px] tracking-wider font-bold ${
-                        course.difficulty === 'beginner' ? 'bg-green-500 hover:bg-green-600' :
-                        course.difficulty === 'intermediate' ? 'bg-yellow-500 hover:bg-yellow-600 font-bold text-black' :
-                        'bg-red-500 hover:bg-red-600 font-bold text-white'
-                      }`}>
-                        {course.difficulty}
-                      </Badge>
-                    </div>
-                  </div>
-                  
-                  <div className="p-6 flex-1 flex flex-col">
-                    <h3 className="text-xl font-bold mb-2 group-hover:text-primary transition-colors">{course.title}</h3>
-                    <p className="text-muted-foreground text-sm line-clamp-2 mb-4 flex-1">
-                      {course.shortDescription}
-                    </p>
-                    
-                    <div className="flex flex-wrap gap-2 mb-6">
-                      {course.tags?.slice(0, 3).map(tag => (
-                        <span key={tag} className="text-[10px] font-medium px-2 py-1 bg-secondary text-secondary-foreground rounded-md">
-                          {tag}
-                        </span>
-                      ))}
-                      {course.tags && course.tags.length > 3 && (
-                        <span className="text-[10px] font-medium px-2 py-1 bg-secondary text-secondary-foreground rounded-md">
-                          +{course.tags.length - 3}
-                        </span>
+                      {isStarted && (
+                        <div className="absolute left-4 top-4">
+                          <Badge className={isDone ? "bg-emerald-600 hover:bg-emerald-700 text-white" : "bg-background/90 text-foreground hover:bg-background border border-border"}>
+                            {isDone ? (
+                              <span className="flex items-center gap-1">
+                                <CheckCircle2 className="h-3 w-3" /> Done
+                              </span>
+                            ) : (
+                              `${percentComplete}% complete`
+                            )}
+                          </Badge>
+                        </div>
                       )}
                     </div>
                     
-                    <div className="flex items-center justify-between mt-auto">
-                      <Button variant="ghost" className="course-card-action p-0 h-auto font-semibold text-primary group-hover:translate-x-1 transition-transform">
-                        View Curriculum <ArrowRight className="ml-2 w-4 h-4" />
-                      </Button>
+                    <div className="p-6 flex-1 flex flex-col">
+                      <h3 className="text-xl font-bold mb-2 group-hover:text-primary transition-colors">{course.title}</h3>
+                      <p className="text-muted-foreground text-sm line-clamp-2 mb-4 flex-1">
+                        {course.shortDescription}
+                      </p>
+                      
+                      <div className="flex flex-wrap gap-2 mb-6">
+                        {course.tags?.slice(0, 3).map(tag => (
+                          <span key={tag} className="text-[10px] font-medium px-2 py-1 bg-secondary text-secondary-foreground rounded-md">
+                            {tag}
+                          </span>
+                        ))}
+                        {course.tags && course.tags.length > 3 && (
+                          <span className="text-[10px] font-medium px-2 py-1 bg-secondary text-secondary-foreground rounded-md">
+                            +{course.tags.length - 3}
+                          </span>
+                        )}
+                      </div>
+
+                      {isStarted && (
+                        <div className="mb-5">
+                          <div className="flex items-center justify-between text-xs font-semibold mb-2">
+                            <span>{isDone ? "Course completed" : "Your progress"}</span>
+                            <span className={isDone ? "text-emerald-600" : "text-muted-foreground"}>
+                              {isDone ? "Done" : `${percentComplete}%`}
+                            </span>
+                          </div>
+                          <Progress
+                            value={isDone ? 100 : percentComplete}
+                            className={isDone ? "[&_[data-slot=progress-indicator]]:bg-emerald-600" : ""}
+                          />
+                        </div>
+                      )}
+                      
+                      <div className="flex items-center justify-between mt-auto">
+                        <Button variant="ghost" className="course-card-action p-0 h-auto font-semibold text-primary group-hover:translate-x-1 transition-transform">
+                          {isStarted ? "Continue Curriculum" : "View Curriculum"} <ArrowRight className="ml-2 w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              );
+            })}
           </div>
         )}
       </div>

@@ -1,0 +1,203 @@
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
+import {
+  CheckCircle2,
+  Edit,
+  Eye,
+  EyeOff,
+  MoreVertical,
+  Plus,
+  Search,
+  Trash,
+} from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+type Challenge = {
+  _id: string;
+  title: string;
+  difficulty: "easy" | "medium" | "hard";
+  category: string;
+  language: string;
+  xpReward: number;
+  isPublished: boolean;
+  completionsCount: number;
+  submissionsCount: number;
+};
+
+export default function AdminChallengesPage() {
+  const [challenges, setChallenges] = useState<Challenge[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const fetchChallenges = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const res = await fetch(`/api/admin/challenges${searchTerm ? `?search=${searchTerm}` : ""}`);
+      const data = await res.json();
+      if (data.success) {
+        setChallenges(data.data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch challenges", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [searchTerm]);
+
+  useEffect(() => {
+    fetchChallenges();
+  }, [fetchChallenges]);
+
+  const togglePublish = async (challenge: Challenge) => {
+    try {
+      const res = await fetch(`/api/admin/challenges/${challenge._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isPublished: !challenge.isPublished }),
+      });
+
+      if (res.ok) fetchChallenges();
+    } catch (error) {
+      console.error("Failed to update challenge", error);
+    }
+  };
+
+  const deleteChallenge = async (id: string) => {
+    if (!confirm("Delete this challenge and its user progress? This action cannot be undone.")) return;
+
+    try {
+      const res = await fetch(`/api/admin/challenges/${id}`, { method: "DELETE" });
+      if (res.ok) fetchChallenges();
+    } catch (error) {
+      console.error("Failed to delete challenge", error);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Challenges</h2>
+          <p className="text-muted-foreground">Create standalone coding challenges for the public challenge hub.</p>
+        </div>
+        <Link href="/admin/challenges/new">
+          <Button className="gap-2">
+            <Plus className="h-4 w-4" />
+            New Challenge
+          </Button>
+        </Link>
+      </div>
+
+      <div className="flex items-center gap-4 bg-card p-4 rounded-lg border border-border">
+        <div className="relative flex-1 max-w-sm">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Search challenges..."
+            className="w-full bg-background border border-border rounded-md pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="bg-card rounded-lg border border-border overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left">
+            <thead className="text-xs text-muted-foreground uppercase bg-muted/50 border-b border-border">
+              <tr>
+                <th className="px-6 py-3 font-medium">Title</th>
+                <th className="px-6 py-3 font-medium">Category</th>
+                <th className="px-6 py-3 font-medium">Difficulty</th>
+                <th className="px-6 py-3 font-medium">Stats</th>
+                <th className="px-6 py-3 font-medium">Status</th>
+                <th className="px-6 py-3 font-medium text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {isLoading ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-8 text-center text-muted-foreground">
+                    Loading challenges...
+                  </td>
+                </tr>
+              ) : challenges.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-8 text-center text-muted-foreground">
+                    No challenges found. Create one to populate the public page.
+                  </td>
+                </tr>
+              ) : (
+                challenges.map((challenge) => (
+                  <tr key={challenge._id} className="hover:bg-muted/50 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="font-medium">{challenge.title}</div>
+                      <div className="text-xs text-muted-foreground uppercase">{challenge.language}</div>
+                    </td>
+                    <td className="px-6 py-4">{challenge.category}</td>
+                    <td className="px-6 py-4 capitalize">{challenge.difficulty}</td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                        {challenge.completionsCount || 0} solved
+                        <span className="text-border">/</span>
+                        {challenge.submissionsCount || 0} submissions
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      {challenge.isPublished ? (
+                        <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-green-500/10 text-green-500 rounded-full border border-green-500/20">
+                          Published
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2 py-1 text-xs font-medium bg-yellow-500/10 text-yellow-500 rounded-full border border-yellow-500/20">
+                          Draft
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger className="p-2 hover:bg-accent rounded-md cursor-pointer">
+                          <MoreVertical className="h-4 w-4" />
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem className="cursor-pointer" render={<Link href={`/admin/challenges/${challenge._id}`} className="flex items-center w-full" />}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            <span>Edit</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="cursor-pointer" onClick={() => togglePublish(challenge)}>
+                            {challenge.isPublished ? (
+                              <><EyeOff className="mr-2 h-4 w-4" /><span>Unpublish</span></>
+                            ) : (
+                              <><Eye className="mr-2 h-4 w-4" /><span>Publish</span></>
+                            )}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="cursor-pointer text-destructive focus:text-destructive"
+                            onClick={() => deleteChallenge(challenge._id)}
+                          >
+                            <Trash className="mr-2 h-4 w-4" />
+                            <span>Delete</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}

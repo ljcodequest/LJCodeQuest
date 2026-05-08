@@ -5,7 +5,7 @@ export default function proxy(request: NextRequest) {
   const session = request.cookies.get('session')?.value
 
   // Protected routes that require authentication
-  const protectedRoutes = ['/dashboard', '/admin', '/challenges']
+  const protectedRoutes = ['/dashboard', '/admin']
   const isProtectedRoute = protectedRoutes.some(route => request.nextUrl.pathname.startsWith(route))
 
   if (isProtectedRoute && !session) {

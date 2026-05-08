@@ -1,4 +1,6 @@
 export { CertificateModel } from "@/models/Certificate";
+export { Challenge as ChallengeModel } from "@/models/Challenge";
+export { ChallengeProgress as ChallengeProgressModel } from "@/models/ChallengeProgress";
 export { Course as CourseModel } from "@/models/Course";
 export { Progress as ProgressModel } from "@/models/Progress";
 export { Question as QuestionModel } from "@/models/Question";

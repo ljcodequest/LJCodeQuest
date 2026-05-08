@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { 
   BarChart, 
   BookOpen, 
+  Code2,
   ListOrdered, 
   Users, 
   CheckSquare, 
@@ -17,6 +18,7 @@ const sidebarLinks = [
   { name: "Dashboard", href: "/admin", icon: BarChart },
   { name: "Courses", href: "/admin/courses", icon: BookOpen },
   { name: "Tracks", href: "/admin/tracks", icon: ListOrdered },
+  { name: "Challenges", href: "/admin/challenges", icon: Code2 },
   { name: "Users", href: "/admin/users", icon: Users },
   { name: "Reviews", href: "/admin/reviews", icon: CheckSquare },
 ];

@@ -1,8 +1,23 @@
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/db";
-import { CourseModel, TrackModel } from "@/models";
+import { CourseModel } from "@/models";
 import { getSessionUser } from "@/lib/auth-server";
 import { ProgressModel } from "@/models";
+
+const DIFFICULTY_ORDER = ["beginner", "intermediate", "advanced"];
+
+type CourseTrackSummary = {
+  difficulty: string;
+  order: number;
+};
+
+function getRouteError(error: unknown) {
+  if (error instanceof Error) {
+    return { message: error.message, status: "status" in error ? Number(error.status) : 500 };
+  }
+
+  return { message: "Unexpected course error", status: 500 };
+}
 
 export async function GET(
   request: Request,
@@ -15,9 +30,9 @@ export async function GET(
     const course = await CourseModel.findOne({ slug, isPublished: true })
       .populate({
          path: "tracks",
-         select: "title slug description xpReward passingScore isPublished order",
+         select: "title slug description difficulty xpReward passingScore isPublished order",
          match: { isPublished: true },
-         options: { sort: { order: 1 } }
+         options: { sort: { difficulty: 1, order: 1 } }
       })
       .lean();
 
@@ -42,11 +57,21 @@ export async function GET(
        }
     }
 
+    const sortedCourse = {
+      ...course,
+      tracks: [...((course.tracks || []) as CourseTrackSummary[])].sort((a, b) => {
+        const difficultyDelta =
+          DIFFICULTY_ORDER.indexOf(a.difficulty) - DIFFICULTY_ORDER.indexOf(b.difficulty);
+        return difficultyDelta || a.order - b.order;
+      }),
+    };
+
     return NextResponse.json({ 
       success: true, 
-      data: { course, isEnrolled, progress } 
+      data: { course: sortedCourse, isEnrolled, progress } 
     });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: error.status || 500 });
+  } catch (error: unknown) {
+    const routeError = getRouteError(error);
+    return NextResponse.json({ success: false, error: routeError.message }, { status: routeError.status || 500 });
   }
 }

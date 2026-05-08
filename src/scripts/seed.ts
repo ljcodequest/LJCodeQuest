@@ -102,6 +102,20 @@ function pyStarter(functionName: string, body: string) {
   ].join("\n");
 }
 
+function javaStarter(body: string) {
+  return [
+    "import java.io.*;",
+    "import java.util.*;",
+    "",
+    "public class Main {",
+    "  public static void main(String[] args) throws Exception {",
+    "    Scanner scanner = new Scanner(System.in);",
+    body,
+    "  }",
+    "}",
+  ].join("\n");
+}
+
 function mcq(
   title: string,
   description: string,
@@ -669,6 +683,168 @@ const courseSeeds: CourseSeed[] = [
   },
 ];
 
+const developerCourseSeeds: CourseSeed[] = [
+  {
+    title: "Java Developer Mastery",
+    description:
+      "A complete Java path with beginner, intermediate, and advanced levels. Learners must finish every beginner assessment with 100% mastery before intermediate or advanced work unlocks.",
+    shortDescription: "Learn Java from syntax to OOP, collections, concurrency, and service design.",
+    difficulty: "beginner",
+    language: "Java",
+    estimatedHours: 26,
+    tags: ["java", "backend", "oop", "spring-ready"],
+    thumbnail: "https://images.unsplash.com/photo-1515879218367-8466d910aaa4",
+    averageRating: 4.9,
+    enrollmentCount: 2870,
+    tracks: [
+      {
+        difficulty: "beginner",
+        title: "Java Basics and Program Flow",
+        description: "Use classes, variables, primitive types, strings, conditionals, loops, and console input.",
+        theory:
+          "# Java Basics and Program Flow\n\nJava programs run from a `main` method. Use clear types, parse input deliberately, and keep beginner programs small enough to reason about line by line.",
+        xpReward: 140,
+        passingScore: 100,
+        questions: [
+          mcq("Java entry point", "Which method is the standard entry point for a Java console program?", "public static void main(String[] args)", ["start()", "main(String args)", "public void run()"], "The JVM starts execution from `public static void main(String[] args)`.", ["java", "basics"], "easy", 20),
+          multi("Primitive numeric types", "Select Java primitive numeric types.", ["int", "double", "long"], ["String"], "`String` is a class, while `int`, `double`, and `long` are primitive numeric types.", ["java", "types"], "easy", 25),
+          descriptive("Java beginner flow", "Why should beginner Java programs parse input before branching?", "Parsing once at the boundary keeps conditions simple, avoids repeated conversions, and makes validation easier to test.", ["java", "input"], "easy", 30),
+          coding("Sum Java integers", "Read two integers and print their sum.", "java", javaStarter("    int a = scanner.nextInt();\n    int b = scanner.nextInt();\n    System.out.println(a + b);"), [{ id: "tc1", input: "4 9", expectedOutput: "13", isHidden: false, weight: 1 }, { id: "tc2", input: "25 17", expectedOutput: "42", isHidden: true, weight: 1 }], ["java", "io"], "easy", 55),
+        ],
+      },
+      {
+        difficulty: "beginner",
+        title: "Java Methods and Arrays",
+        description: "Break Java code into methods and process arrays with simple loops.",
+        theory:
+          "# Java Methods and Arrays\n\nMethods name reusable behavior. Arrays store fixed-size sequences, so loop bounds and index checks matter.",
+        xpReward: 150,
+        passingScore: 100,
+        questions: [
+          mcq("Method return type", "What does `void` mean in a Java method declaration?", "The method returns no value", ["The method is private", "The method returns null", "The method is asynchronous"], "`void` says callers should not expect a returned value.", ["java", "methods"], "easy", 20),
+          multi("Array loop safety", "Which practices help avoid array index errors?", ["Start at index 0", "Use `array.length` for the upper bound"], ["Loop through `i <= array.length`", "Assume every array has ten items"], "Java arrays are zero-indexed and the last valid index is `array.length - 1`.", ["java", "arrays"], "easy", 25),
+          descriptive("Java method extraction", "When should beginner Java code be moved into a method?", "Extract a method when a block has a clear responsibility, repeats, or makes `main` hard to scan.", ["java", "methods"], "easy", 30),
+          coding("Largest Java number", "Read `n` followed by `n` integers and print the largest value.", "java", javaStarter("    int n = scanner.nextInt();\n    int best = Integer.MIN_VALUE;\n    for (int i = 0; i < n; i++) {\n      best = Math.max(best, scanner.nextInt());\n    }\n    System.out.println(best);"), [{ id: "tc1", input: "5 4 8 1 9 2", expectedOutput: "9", isHidden: false, weight: 1 }, { id: "tc2", input: "3 -5 -2 -8", expectedOutput: "-2", isHidden: true, weight: 1 }], ["java", "arrays"], "easy", 60),
+        ],
+      },
+      {
+        difficulty: "intermediate",
+        title: "Java OOP and Collections",
+        description: "Model domains with classes, encapsulation, lists, maps, sets, and collection iteration.",
+        theory:
+          "# Java OOP and Collections\n\nUse classes to protect invariants. Choose `List` for ordered values, `Set` for uniqueness, and `Map` for key-based lookup.",
+        xpReward: 180,
+        passingScore: 100,
+        questions: [
+          mcq("Encapsulation", "What is the main goal of encapsulation?", "Protect object state behind methods", ["Make every field public", "Remove constructors", "Avoid packages"], "Encapsulation keeps state changes controlled by the object API.", ["java", "oop"], "medium", 25),
+          multi("Collection choices", "Select correct Java collection matches.", ["ArrayList for ordered dynamic items", "HashSet for uniqueness", "HashMap for key-value lookup"], ["Thread for JSON parsing"], "The Java collections framework gives different structures for different access patterns.", ["java", "collections"], "medium", 30),
+          descriptive("Choosing Java collections", "Explain when you would choose a `Map` instead of a `List`.", "Use a Map when lookup by key is central, such as finding users by id. A List fits ordered traversal or position-based access.", ["java", "collections"], "medium", 35),
+          coding("Java frequency count", "Read words and print the count of the most frequent word.", "java", javaStarter("    Map<String, Integer> counts = new HashMap<>();\n    int best = 0;\n    while (scanner.hasNext()) {\n      String word = scanner.next().toLowerCase();\n      int next = counts.getOrDefault(word, 0) + 1;\n      counts.put(word, next);\n      best = Math.max(best, next);\n    }\n    System.out.println(best);"), [{ id: "tc1", input: "red blue red green red", expectedOutput: "3", isHidden: false, weight: 1 }, { id: "tc2", input: "a b b c c c", expectedOutput: "3", isHidden: true, weight: 1 }], ["java", "maps"], "medium", 70),
+        ],
+      },
+      {
+        difficulty: "advanced",
+        title: "Java Concurrency and Services",
+        description: "Reason about threads, immutability, exceptions, boundaries, and service-style Java code.",
+        theory:
+          "# Java Concurrency and Services\n\nAdvanced Java code needs clear ownership of mutable state, explicit error handling, and APIs that make invalid states hard to represent.",
+        xpReward: 240,
+        passingScore: 100,
+        questions: [
+          mcq("Thread safety", "Which approach most directly reduces shared-state concurrency bugs?", "Prefer immutable data or synchronize shared mutations", ["Store everything in public static fields", "Ignore exceptions", "Use longer variable names"], "Concurrency is safer when mutable shared state is removed or guarded.", ["java", "concurrency"], "hard", 30),
+          multi("Service boundary habits", "Which habits make Java services more reliable?", ["Validate request input", "Return clear error responses", "Keep transactions scoped"], ["Swallow every exception"], "Reliable services validate, handle failures explicitly, and keep data changes consistent.", ["java", "services"], "hard", 35),
+          descriptive("Java service design", "Why should service methods separate validation from persistence?", "Validation protects deeper code from invalid assumptions, while persistence should focus on consistent state changes and transactional boundaries.", ["java", "architecture"], "hard", 40),
+          coding("Java unique ids", "Read ids and print `DUPLICATE` if any id repeats, otherwise `UNIQUE`.", "java", javaStarter("    Set<String> seen = new HashSet<>();\n    while (scanner.hasNext()) {\n      String id = scanner.next();\n      if (seen.contains(id)) {\n        System.out.println(\"DUPLICATE\");\n        return;\n      }\n      seen.add(id);\n    }\n    System.out.println(\"UNIQUE\");"), [{ id: "tc1", input: "u1 u2 u3 u2", expectedOutput: "DUPLICATE", isHidden: false, weight: 1 }, { id: "tc2", input: "a b c", expectedOutput: "UNIQUE", isHidden: true, weight: 1 }], ["java", "sets"], "hard", 85),
+        ],
+      },
+    ],
+  },
+  ...[
+    {
+      title: "Git and Developer Workflow",
+      language: "Git",
+      tags: ["git", "github", "workflow", "collaboration"],
+      description: "Learn version control, branching, pull requests, conflict resolution, and release hygiene.",
+      shortDescription: "Use Git confidently in real team workflows.",
+      thumbnail: "https://images.unsplash.com/photo-1556075798-4825dfaaf498",
+      tracks: ["Commits and Branches", "Pull Requests and Reviews", "Rebases, Releases, and Recovery"],
+    },
+    {
+      title: "Testing and Quality Engineering",
+      language: "TypeScript",
+      tags: ["testing", "quality", "automation", "ci"],
+      description: "Build confidence with unit, integration, end-to-end, accessibility, and regression testing.",
+      shortDescription: "Ship reliable software with practical testing strategy.",
+      thumbnail: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3",
+      tracks: ["Testing Fundamentals", "Integration and Browser Tests", "CI Quality Gates"],
+    },
+    {
+      title: "Cloud and DevOps Foundations",
+      language: "Cloud",
+      tags: ["cloud", "devops", "docker", "deployment"],
+      description: "Understand containers, environments, deployments, observability, and operational safety.",
+      shortDescription: "Deploy and operate applications with modern DevOps practices.",
+      thumbnail: "https://images.unsplash.com/photo-1451187580459-43490279c0fa",
+      tracks: ["Containers and Environments", "Deployment Pipelines", "Observability and Incident Response"],
+    },
+    {
+      title: "Security for Developers",
+      language: "Security",
+      tags: ["security", "auth", "owasp", "backend"],
+      description: "Practice secure input handling, authentication, authorization, secrets, and common web risks.",
+      shortDescription: "Build safer applications from the first line of code.",
+      thumbnail: "https://images.unsplash.com/photo-1550751827-4bd374c3f58b",
+      tracks: ["Secure Coding Basics", "Authentication and Authorization", "Threat Modeling and Hardening"],
+    },
+    {
+      title: "System Design and Architecture",
+      language: "Architecture",
+      tags: ["system-design", "architecture", "scalability", "backend"],
+      description: "Design scalable services with clear APIs, data ownership, queues, caches, and tradeoff thinking.",
+      shortDescription: "Think like an architect without losing engineering practicality.",
+      thumbnail: "https://images.unsplash.com/photo-1497366754035-f200968a6e72",
+      tracks: ["API and Data Design", "Scaling and Caching", "Distributed Systems Tradeoffs"],
+    },
+    {
+      title: "HTML CSS and Accessibility",
+      language: "HTML/CSS",
+      tags: ["html", "css", "accessibility", "frontend"],
+      description: "Create semantic, responsive, accessible interfaces with maintainable styling systems.",
+      shortDescription: "Build interfaces that are usable, responsive, and accessible.",
+      thumbnail: "https://images.unsplash.com/photo-1498050108023-c5249f4df085",
+      tracks: ["Semantic HTML and Forms", "Responsive CSS Layouts", "Accessibility Audits"],
+    },
+  ].map((course, courseIndex): CourseSeed => ({
+    title: course.title,
+    description: course.description,
+    shortDescription: course.shortDescription,
+    difficulty: "beginner",
+    language: course.language,
+    estimatedHours: 12 + courseIndex * 2,
+    tags: course.tags,
+    thumbnail: course.thumbnail,
+    averageRating: 4.7 + (courseIndex % 3) * 0.1,
+    enrollmentCount: 980 + courseIndex * 280,
+    tracks: course.tracks.map((title, index) => {
+      const difficulty = (["beginner", "intermediate", "advanced"] as const)[index];
+      return {
+        difficulty,
+        title,
+        description: `Master ${title.toLowerCase()} with focused developer practice.`,
+        theory: `# ${title}\n\nThis level focuses on practical decisions, clear terminology, and habits that transfer into production work.`,
+        xpReward: 120 + index * 35,
+        passingScore: 100,
+        questions: [
+          mcq(`${title} core idea`, `Which habit best supports ${title.toLowerCase()}?`, "Use small, reviewable changes with clear feedback", ["Hide failures until release", "Skip validation", "Avoid documentation always"], "Strong developer workflows make state, intent, and failure visible.", course.tags, index === 0 ? "easy" : index === 1 ? "medium" : "hard", 20 + index * 5),
+          multi(`${title} reliable practices`, `Select practices that improve ${title.toLowerCase()}.`, ["Automate repeatable checks", "Name decisions clearly", "Review risky changes"], ["Commit secrets to the repository"], "Automation, naming, and review reduce avoidable mistakes.", course.tags, index === 0 ? "easy" : "medium", 25 + index * 5),
+          descriptive(`${title} tradeoff`, `Explain one tradeoff a developer should consider in ${title.toLowerCase()}.`, "A strong answer names the context, the benefit, the cost, and how the team would detect whether the decision is working.", course.tags, index === 0 ? "easy" : index === 1 ? "medium" : "hard", 30 + index * 5),
+          coding(`${title} signal count`, "Read event labels and print how many labels start with `pass:`.", "javascript", jsStarter("solve", "  return input.split(/\\s+/).filter((label) => label.startsWith('pass:')).length;"), [{ id: "tc1", input: "pass:lint fail:test pass:build", expectedOutput: "2", isHidden: false, weight: 1 }, { id: "tc2", input: "skip pass:a pass:b fail:c", expectedOutput: "2", isHidden: true, weight: 1 }], course.tags, index === 0 ? "easy" : "medium", 50 + index * 10),
+        ],
+      };
+    }),
+  })),
+];
+
 async function upsertUser(input: {
   email: string;
   displayName: string;
@@ -811,22 +987,31 @@ async function resetSeededData() {
   await Question.deleteMany({});
   await Track.deleteMany({});
   await Course.deleteMany({});
-  await User.deleteMany({
-    email: {
-      $in: [
-        "admin@ljcodequest.dev",
-        "student1@ljcodequest.dev",
-        "student2@ljcodequest.dev",
-        "student3@ljcodequest.dev",
-      ],
-    },
-  });
+  await User.deleteMany({});
+}
+
+async function reconcileTrackIndexes() {
+  try {
+    await Track.collection.dropIndex("courseId_1_order_1");
+    console.log("[seed] Dropped legacy track index courseId_1_order_1.");
+  } catch (error) {
+    const mongoError = error as { codeName?: string; code?: number };
+    if (mongoError.codeName !== "IndexNotFound" && mongoError.code !== 27) {
+      throw error;
+    }
+  }
+
+  await Track.collection.createIndex(
+    { courseId: 1, difficulty: 1, order: 1 },
+    { unique: true, name: "courseId_1_difficulty_1_order_1" }
+  );
 }
 
 async function seed() {
   const shouldReset = process.argv.includes(RESET_FLAG);
 
   await dbConnect();
+  await reconcileTrackIndexes();
 
   if (shouldReset) {
     console.log("[seed] Reset flag detected, removing existing catalog, progress, submissions, and certificates...");
@@ -881,25 +1066,32 @@ async function seed() {
     tracks: Array<{ track: Awaited<ReturnType<typeof upsertTrack>>; questions: Awaited<ReturnType<typeof upsertQuestion>>[] }>;
   }> = [];
 
-  for (const courseSeed of courseSeeds) {
+  for (const courseSeed of [...courseSeeds, ...developerCourseSeeds]) {
     const { tracks, ...courseInput } = courseSeed;
     const course = await upsertCourse({ ...courseInput, createdBy: admin._id });
     const createdTracks: Array<{
       track: Awaited<ReturnType<typeof upsertTrack>>;
       questions: Awaited<ReturnType<typeof upsertQuestion>>[];
     }> = [];
+    const difficultyOrderCounts: Record<Difficulty, number> = {
+      beginner: 0,
+      intermediate: 0,
+      advanced: 0,
+    };
 
-    for (const [trackIndex, trackSeed] of tracks.entries()) {
+    for (const trackSeed of tracks) {
+      difficultyOrderCounts[trackSeed.difficulty] += 1;
+      const orderInDifficulty = difficultyOrderCounts[trackSeed.difficulty];
       const track = await upsertTrack({
         courseId: course._id,
         difficulty: trackSeed.difficulty,
-        order: trackIndex + 1,
+        order: orderInDifficulty,
         title: trackSeed.title,
         description: trackSeed.description,
         theory: trackSeed.theory,
         xpReward: trackSeed.xpReward,
         passingScore: trackSeed.passingScore,
-        isLocked: trackIndex > 0,
+        isLocked: !(trackSeed.difficulty === "beginner" && orderInDifficulty === 1),
       });
 
       const questions = [];

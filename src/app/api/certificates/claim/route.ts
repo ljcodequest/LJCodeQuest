@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireRegisteredUser } from "@/lib/auth";
 import dbConnect from "@/lib/db";
-import { CertificateModel, ProgressModel, CourseModel, UserModel } from "@/models";
+import { CertificateModel, ProgressModel } from "@/models";
 import crypto from "crypto";
 
 function createVerificationHash(certificateId: string, userId: string, courseId: string) {
@@ -9,6 +9,14 @@ function createVerificationHash(certificateId: string, userId: string, courseId:
     .createHash("sha256")
     .update(`${certificateId}:${userId}:${courseId}:${process.env.CERTIFICATE_SECRET || "lj-codequest"}`)
     .digest("hex");
+}
+
+function getRouteError(error: unknown) {
+  if (error instanceof Error) {
+    return { message: error.message, status: "status" in error ? Number(error.status) : 500 };
+  }
+
+  return { message: "Unexpected certificate error", status: 500 };
 }
 
 export async function POST(request: Request) {
@@ -19,14 +27,18 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { courseId } = body;
 
-    // Validate if the User has actually completed the course
+    // A learner can claim a certificate after 100% beginner mastery.
+    // Full-course completion also remains valid for learners who continue through advanced.
     const progress = await ProgressModel.findOne({
        userId: context.user._id,
        courseId
     });
 
-    if (!progress || !progress.isCompleted) {
-       return NextResponse.json({ success: false, error: "Course not completed" }, { status: 403 });
+    const hasBeginnerCertificateEligibility =
+       progress?.completedLevels?.includes("beginner") || progress?.isCompleted;
+
+    if (!progress || !hasBeginnerCertificateEligibility) {
+       return NextResponse.json({ success: false, error: "Beginner level not completed" }, { status: 403 });
     }
 
     // Check if certificate already exists
@@ -58,21 +70,28 @@ export async function POST(request: Request) {
        courseId,
        status: "active",
        verificationHash,
+       metadata: {
+          awardedFor: progress.isCompleted ? "course" : "beginner-level",
+          completedLevels: progress.completedLevels || [],
+       },
     });
 
-    // Optionally award a Badge or massive XP boost to the User Document here
-    // However gamification formula automatically awarded course-XP inside Phase 4
+    await ProgressModel.findByIdAndUpdate(progress._id, {
+       certificateId: newCertificate._id,
+       status: progress.isCompleted ? "certified" : "passed",
+    });
 
     return NextResponse.json({ 
        success: true, 
        data: { certificateId: newCertificate.certificateId }
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     // If we hit the compound unique index, we handle it gracefully just in case
-    if (error.code === 11000) {
+    if (typeof error === "object" && error !== null && "code" in error && error.code === 11000) {
        return NextResponse.json({ success: false, error: "Certificate already generated." }, { status: 400 });
     }
-    return NextResponse.json({ success: false, error: error.message }, { status: error.status || 500 });
+    const routeError = getRouteError(error);
+    return NextResponse.json({ success: false, error: routeError.message }, { status: routeError.status || 500 });
   }
 }

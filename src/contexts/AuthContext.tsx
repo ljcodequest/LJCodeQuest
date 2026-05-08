@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import { User, onIdTokenChanged, signOut } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
+import { clearSession, establishSession } from "@/lib/auth-client";
 
 interface AuthContextType {
   user: User | null;
@@ -35,24 +36,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         if (!currentUser) {
           setUser(null);
-          // Clear session cookie
-          await fetch("/api/auth/session", { method: "DELETE" });
+          await clearSession();
         } else {
           setUser(currentUser);
-          // Set session cookie
-          const token = await currentUser.getIdToken();
-          await fetch("/api/auth/session", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ token }),
-          });
-          
-          // Sync user with MongoDB
-          await fetch("/api/auth/sync", {
-            method: "POST",
-          });
+          await establishSession(currentUser);
         }
       } catch (error) {
         console.error("Error syncing auth session:", error);
@@ -73,7 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error("Error signing out from Firebase:", error);
     } finally {
       // Always clear server session cookie, even if Firebase sign-out fails.
-      await fetch("/api/auth/session", { method: "DELETE" });
+      await clearSession();
       router.push("/login");
     }
   };

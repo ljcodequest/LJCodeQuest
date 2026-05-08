@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, useEffect, use } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { 
   BookOpen, Clock, Target, CheckCircle2, 
-  ArrowRight, ShieldAlert, Award, PlayCircle, Loader2
+  ShieldAlert, Award, Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -34,13 +33,18 @@ interface Course {
   tracks: Track[];
 }
 
+interface CourseProgress {
+  isCompleted?: boolean;
+  completedLevels?: string[];
+}
+
 export default function CourseDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const router = useRouter();
   
   const [course, setCourse] = useState<Course | null>(null);
   const [isEnrolled, setIsEnrolled] = useState(false);
-  const [progress, setProgress] = useState<any>(null);
+  const [progress, setProgress] = useState<CourseProgress | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isEnrolling, setIsEnrolling] = useState(false);
 
@@ -104,6 +108,8 @@ export default function CourseDetailPage({ params }: { params: Promise<{ slug: s
   }
 
   if (!course) return null;
+  const canClaimCertificate =
+    Boolean(progress?.isCompleted) || Boolean(progress?.completedLevels?.includes("beginner"));
 
   return (
     <div className="min-h-screen bg-background pb-20">
@@ -165,6 +171,16 @@ export default function CourseDetailPage({ params }: { params: Promise<{ slug: s
                   <Button className="w-full" size="lg" onClick={() => router.push(`/learn/${slug}`)}>
                     Continue Learning
                   </Button>
+                  {canClaimCertificate && (
+                    <Button
+                      className="w-full gap-2"
+                      variant="secondary"
+                      size="lg"
+                      onClick={() => router.push(`/courses/${slug}/certificate`)}
+                    >
+                      <Award className="w-4 h-4" /> Get Certificate
+                    </Button>
+                  )}
                 </div>
              ) : (
                <div className="space-y-4">
@@ -220,7 +236,7 @@ export default function CourseDetailPage({ params }: { params: Promise<{ slug: s
                    ))}
                    {course.tracks.length === 0 && (
                       <div className="p-8 text-center text-muted-foreground border border-dashed border-border rounded-lg">
-                        This course doesn't have any tracks yet. Check back soon!
+                        This course does not have any tracks yet. Check back soon!
                       </div>
                    )}
                 </div>

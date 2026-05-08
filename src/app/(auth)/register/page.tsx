@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { 
+  type AuthProvider as FirebaseAuthProvider,
   createUserWithEmailAndPassword, 
   updateProfile,
   signInWithPopup, 
@@ -11,11 +12,16 @@ import {
   GithubAuthProvider 
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import { establishSession } from "@/lib/auth-client";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+
+function getAuthErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
 
 export default function RegisterPage() {
   const [name, setName] = useState("");
@@ -25,12 +31,25 @@ export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
 
+  const getRedirectTarget = () => {
+    if (typeof window === "undefined") return "/dashboard";
+
+    const redirect = new URLSearchParams(window.location.search).get("redirect");
+    return redirect?.startsWith("/") && !redirect.startsWith("//")
+      ? redirect
+      : "/dashboard";
+  };
+
   const handleEmailSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError("");
 
     try {
+      if (!auth) {
+        throw new Error("Firebase authentication is not configured.");
+      }
+
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       // Update Firebase Profile with name
       if (userCredential.user) {
@@ -38,22 +57,27 @@ export default function RegisterPage() {
           displayName: name
         });
       }
-      // AuthContext will handle session cookie + mongodb sync
-      router.push("/dashboard");
-    } catch (err: any) {
-      setError(err.message || "Failed to create an account.");
+      await establishSession(userCredential.user, { forceRefresh: true });
+      router.replace(getRedirectTarget());
+    } catch (err: unknown) {
+      setError(getAuthErrorMessage(err, "Failed to create an account."));
       setIsLoading(false);
     }
   };
 
-  const signInWithProvider = async (provider: any) => {
+  const signInWithProvider = async (provider: FirebaseAuthProvider) => {
     setIsLoading(true);
     setError("");
     try {
-      await signInWithPopup(auth, provider);
-      router.push("/dashboard");
-    } catch (err: any) {
-      setError(err.message || "Failed to sign up with provider.");
+      if (!auth) {
+        throw new Error("Firebase authentication is not configured.");
+      }
+
+      const credential = await signInWithPopup(auth, provider);
+      await establishSession(credential.user);
+      router.replace(getRedirectTarget());
+    } catch (err: unknown) {
+      setError(getAuthErrorMessage(err, "Failed to sign up with provider."));
       setIsLoading(false);
     }
   };

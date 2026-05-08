@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { adminAuth } from "@/lib/firebase-admin";
 
 export async function POST(req: Request) {
   try {
@@ -7,6 +8,8 @@ export async function POST(req: Request) {
     if (!token) {
       return NextResponse.json({ error: "Missing token" }, { status: 400 });
     }
+
+    await adminAuth.verifyIdToken(token);
 
     const cookieStore = await cookies();
     cookieStore.set("session", token, {
@@ -20,7 +23,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Failed to set session", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json({ error: "Invalid auth token" }, { status: 401 });
   }
 }
 

@@ -2,6 +2,17 @@ import { NextResponse } from "next/server";
 import { requireRegisteredUser } from "@/lib/auth";
 import dbConnect from "@/lib/db";
 import { CourseModel, TrackModel, QuestionModel, ProgressModel } from "@/models";
+import { sanitizeQuestionForRole } from "@/lib/question-visibility";
+
+const DIFFICULTY_ORDER = ["beginner", "intermediate", "advanced"] as const;
+
+function getRouteError(error: unknown) {
+  if (error instanceof Error) {
+    return { message: error.message, status: "status" in error ? Number(error.status) : 500 };
+  }
+
+  return { message: "Unexpected questions error", status: 500 };
+}
 
 export async function GET(
   request: Request,
@@ -33,36 +44,40 @@ export async function GET(
        return NextResponse.json({ success: false, error: "Not enrolled in this course" }, { status: 403 });
     }
 
-    const previousTracks = await TrackModel.find({ 
-       courseId: course._id, 
-       isPublished: true,
-       order: { $lt: currentTrack.order }
-    }).select("_id").lean();
-
-    const previousTrackIds = previousTracks.map(t => t._id.toString());
     const completedTrackIds = progress.completedTracks.map(id => id.toString());
+    const completedLevels = progress.completedLevels || [];
+    const isAdmin = context.role === "admin";
+    const isCompletedTrack = completedTrackIds.includes(currentTrack._id.toString());
+    const isCurrentTrack = progress.currentTrackId?.toString() === currentTrack._id.toString();
 
-    if (!previousTrackIds.every(id => completedTrackIds.includes(id))) {
+    const difficultyIndex = DIFFICULTY_ORDER.indexOf(
+      currentTrack.difficulty as (typeof DIFFICULTY_ORDER)[number]
+    );
+    const previousDifficulty =
+      difficultyIndex > 0 ? DIFFICULTY_ORDER[difficultyIndex - 1] : null;
+    const isDifficultyUnlocked =
+      currentTrack.difficulty === "beginner" ||
+      (previousDifficulty ? completedLevels.includes(previousDifficulty) : false);
+
+    if (!isAdmin && (!isDifficultyUnlocked || (!isCompletedTrack && !isCurrentTrack))) {
        return NextResponse.json({ success: false, error: "Locked via Prerequisites" }, { status: 403 });
     }
 
-    // Fetch the track's questions
-    // Wait, the Track model has a `questions` array. We can populate it, or sort it via QuestionModel's Order.
     const questions = await QuestionModel.find({
        trackId: currentTrack._id,
        isPublished: true
     }).sort({ order: 1 }).select("-__v").lean();
 
-    // Remove the `isCorrect` flag from options before sending to the client to prevent cheating!
-    const secureQuestions = questions.map((q: any) => {
-       if (q.options) {
-          q.options = q.options.map((opt: any) => {
-             const { isCorrect, ...rest } = opt; // Strips out the answer key
-             return rest;
-          });
-       }
-       return q;
-    });
+    const completedQuestionIds = progress.completedQuestions.map(id => id.toString());
+    const highestCompletedOrder = questions.reduce((highest, question) => {
+      return completedQuestionIds.includes(question._id.toString())
+        ? Math.max(highest, question.order)
+        : highest;
+    }, 0);
+    const visibleQuestionLimit = isCompletedTrack ? questions.length : highestCompletedOrder + 1;
+    const secureQuestions = questions
+      .filter((question) => isAdmin || question.order <= visibleQuestionLimit)
+      .map((question) => sanitizeQuestionForRole(question as unknown as Record<string, unknown>, context.role));
 
     return NextResponse.json({ 
       success: true, 
@@ -72,10 +87,12 @@ export async function GET(
            title: currentTrack.title,
            passingScore: currentTrack.passingScore,
         },
+        currentQuestionOrder: Math.min(visibleQuestionLimit, questions.length),
         questions: secureQuestions
       } 
     });
-  } catch (error: any) {
-    return NextResponse.json({ success: false, error: error.message }, { status: error.status || 500 });
+  } catch (error: unknown) {
+    const routeError = getRouteError(error);
+    return NextResponse.json({ success: false, error: routeError.message }, { status: routeError.status || 500 });
   }
 }

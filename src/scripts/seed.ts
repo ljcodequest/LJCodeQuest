@@ -4,7 +4,10 @@ import mongoose from "mongoose";
 import dbConnect from "../lib/db";
 import { calculateLevel } from "../lib/gamification";
 import { ActivityLogModel } from "../models/ActivityLog";
+import { Attempt } from "../models/Attempt";
 import { CertificateModel } from "../models/Certificate";
+import { Challenge } from "../models/Challenge";
+import { ChallengeProgress } from "../models/ChallengeProgress";
 import { Course } from "../models/Course";
 import { Progress } from "../models/Progress";
 import { Question } from "../models/Question";
@@ -15,6 +18,7 @@ import { User } from "../models/User";
 loadEnvConfig(process.cwd());
 
 const RESET_FLAG = "--reset";
+const QUESTIONS_PER_TRACK = 24;
 
 type Difficulty = "beginner" | "intermediate" | "advanced";
 type QuestionDifficulty = "easy" | "medium" | "hard";
@@ -75,6 +79,58 @@ function slugify(value: string) {
     .replace(/[^a-z0-9\s-]/g, "")
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-");
+}
+
+function hashString(value: string) {
+  let hash = 2166136261;
+
+  for (const char of value) {
+    hash ^= char.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
+
+  return hash >>> 0;
+}
+
+function deterministicShuffle<T>(items: T[], salt: string) {
+  const shuffled = [...items];
+  let seed = hashString(salt);
+
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0;
+    const swapIndex = seed % (index + 1);
+    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+  }
+
+  return shuffled;
+}
+
+function mixOptions(
+  options: Array<{ id: string; text: string; isCorrect: boolean }>,
+  salt: string
+) {
+  const shuffled = deterministicShuffle(options, salt);
+
+  if (shuffled[0]?.isCorrect) {
+    const firstWrongIndex = shuffled.findIndex((option) => !option.isCorrect);
+
+    if (firstWrongIndex > 0) {
+      [shuffled[0], shuffled[firstWrongIndex]] = [shuffled[firstWrongIndex], shuffled[0]];
+    }
+  }
+
+  return shuffled;
+}
+
+function mixQuestionOptions<T extends QuestionSeed>(question: T, salt: string): T {
+  if (!question.options?.length) {
+    return question;
+  }
+
+  return {
+    ...question,
+    options: mixOptions(question.options, salt),
+  };
 }
 
 function jsStarter(functionName: string, body: string) {
@@ -317,6 +373,271 @@ function coding(
     testCases,
     hints,
     tags,
+  };
+}
+
+function generatedFillBlank(
+  title: string,
+  description: string,
+  template: string,
+  correct: [string, string],
+  wrong: [string, string],
+  explanation: string,
+  tags: string[],
+  difficulty: QuestionDifficulty,
+  xpReward: number
+): QuestionSeed {
+  return {
+    type: "descriptive",
+    title,
+    description,
+    difficulty,
+    xpReward,
+    starterCode: template,
+    sampleAnswer: "c1,c2",
+    explanation,
+    options: [
+      { id: "c1", text: correct[0], isCorrect: true },
+      { id: "c2", text: correct[1], isCorrect: true },
+      { id: "w1", text: wrong[0], isCorrect: false },
+      { id: "w2", text: wrong[1], isCorrect: false },
+    ],
+    maxWords: 120,
+    rubric: explanation,
+    tags,
+  };
+}
+
+const masteryDimensions = [
+  {
+    label: "boundary validation",
+    correct: "Validate input at the boundary before downstream code trusts it",
+    multiCorrect: ["Reject malformed input early", "Return actionable errors", "Keep validation close to the API boundary"],
+    wrong: ["Wait until persistence fails", "Trust client-only checks", "Treat invalid input as an empty success"],
+    blanks: ["malformed", "boundary"] as [string, string],
+    distractors: ["cached", "animation"] as [string, string],
+  },
+  {
+    label: "state ownership",
+    correct: "Place mutable state at the smallest owner that must read or update it",
+    multiCorrect: ["Avoid duplicating derived values", "Lift state only for shared access", "Keep updates explicit"],
+    wrong: ["Store every derived value independently", "Put all state in a global object", "Let unrelated components mutate it"],
+    blanks: ["owner", "derived"] as [string, string],
+    distractors: ["stylesheet", "package"] as [string, string],
+  },
+  {
+    label: "error recovery",
+    correct: "Separate transient failures from permanent validation or permission failures",
+    multiCorrect: ["Retry transient failures with a limit", "Surface permanent errors clearly", "Log enough context to debug"],
+    wrong: ["Retry every error forever", "Hide failed operations", "Convert all errors into success responses"],
+    blanks: ["transient", "permanent"] as [string, string],
+    distractors: ["decorative", "random"] as [string, string],
+  },
+  {
+    label: "data modeling",
+    correct: "Model the domain around stable identities and relationships instead of duplicated facts",
+    multiCorrect: ["Use stable identifiers", "Avoid duplicated source-of-truth fields", "Represent relationships explicitly"],
+    wrong: ["Copy every field into every record", "Use display names as primary keys", "Skip constraints to make writes easier"],
+    blanks: ["identity", "relationship"] as [string, string],
+    distractors: ["gradient", "shortcut"] as [string, string],
+  },
+  {
+    label: "performance diagnosis",
+    correct: "Measure the slow path before changing algorithms, queries, or caching",
+    multiCorrect: ["Measure before optimizing", "Check data size assumptions", "Compare complexity and real timings"],
+    wrong: ["Optimize the first line you see", "Ignore production-like data", "Add caching without invalidation rules"],
+    blanks: ["measure", "bottleneck"] as [string, string],
+    distractors: ["guess", "palette"] as [string, string],
+  },
+  {
+    label: "security review",
+    correct: "Assume external input is hostile until authentication, authorization, and validation pass",
+    multiCorrect: ["Check authorization on the server", "Keep secrets outside client bundles", "Validate external input"],
+    wrong: ["Trust hidden form fields", "Log secrets for easier debugging", "Authorize by button visibility only"],
+    blanks: ["authorization", "secrets"] as [string, string],
+    distractors: ["spacing", "icons"] as [string, string],
+  },
+  {
+    label: "test strategy",
+    correct: "Cover the riskiest behavior with tests at the smallest level that proves the contract",
+    multiCorrect: ["Test edge cases", "Keep fixtures realistic", "Automate regression checks"],
+    wrong: ["Only test the happy path manually", "Mock the behavior under test", "Delete failing tests during release"],
+    blanks: ["contract", "regression"] as [string, string],
+    distractors: ["viewport", "headline"] as [string, string],
+  },
+  {
+    label: "API contracts",
+    correct: "Make success, failure, and versioning shapes explicit for both client and server",
+    multiCorrect: ["Return typed error shapes", "Document breaking changes", "Validate response assumptions"],
+    wrong: ["Return unrelated shapes for the same state", "Change response fields silently", "Let clients infer errors from CSS"],
+    blanks: ["success", "failure"] as [string, string],
+    distractors: ["shadow", "border"] as [string, string],
+  },
+  {
+    label: "caching tradeoffs",
+    correct: "Cache only when the allowed staleness and invalidation path are clear",
+    multiCorrect: ["Define acceptable staleness", "Invalidate after relevant writes", "Measure cache hit behavior"],
+    wrong: ["Cache every request forever", "Ignore user-specific data", "Use stale data for security decisions"],
+    blanks: ["staleness", "invalidation"] as [string, string],
+    distractors: ["opacity", "rounded"] as [string, string],
+  },
+  {
+    label: "refactoring judgment",
+    correct: "Refactor when it reduces repeated risk or makes a real change easier to make",
+    multiCorrect: ["Preserve observable behavior", "Keep changes reviewable", "Refactor around a clear pain point"],
+    wrong: ["Rewrite unrelated modules together", "Change behavior without tests", "Prefer novelty over local conventions"],
+    blanks: ["behavior", "pain"] as [string, string],
+    distractors: ["color", "asset"] as [string, string],
+  },
+];
+
+function questionDifficultyForTrack(trackDifficulty: Difficulty, offset = 0): QuestionDifficulty {
+  if (trackDifficulty === "advanced") {
+    return "hard";
+  }
+
+  if (trackDifficulty === "intermediate" || offset % 3 === 2) {
+    return "medium";
+  }
+
+  return "easy";
+}
+
+function generatedCodingQuestion(course: CourseSeed, track: TrackSeed, index: number): QuestionSeed {
+  const variant = index % 4;
+  const language = course.language === "Java" || course.language === "Python" ? course.language.toLowerCase() : "javascript";
+  const difficulty = questionDifficultyForTrack(track.difficulty, index);
+  const xpReward = difficulty === "hard" ? 90 : difficulty === "medium" ? 70 : 55;
+  const tags = [...new Set([...course.tags, ...track.questions.flatMap((question) => question.tags).slice(0, 3)])];
+
+  if (variant === 0) {
+    const title = `${track.title}: passing signal audit ${index + 1}`;
+    const description = "Read space-separated labels and print how many begin with `pass:`.";
+
+    if (language === "java") {
+      return coding(title, description, "java", javaStarter("    int count = 0;\n    while (scanner.hasNext()) {\n      if (scanner.next().startsWith(\"pass:\")) count++;\n    }\n    System.out.println(count);"), [{ id: "tc1", input: "pass:lint fail:test pass:build", expectedOutput: "2", isHidden: false, weight: 1 }, { id: "tc2", input: "skip pass:a pass:b fail:c pass:d", expectedOutput: "3", isHidden: true, weight: 1 }], tags, difficulty, xpReward);
+    }
+
+    if (language === "python") {
+      return coding(title, description, "python", pyStarter("solve", "    return sum(1 for label in data.split() if label.startswith('pass:'))"), [{ id: "tc1", input: "pass:lint fail:test pass:build", expectedOutput: "2", isHidden: false, weight: 1 }, { id: "tc2", input: "skip pass:a pass:b fail:c pass:d", expectedOutput: "3", isHidden: true, weight: 1 }], tags, difficulty, xpReward);
+    }
+
+    return coding(title, description, "javascript", jsStarter("solve", "  return input.split(/\\s+/).filter((label) => label.startsWith('pass:')).length;"), [{ id: "tc1", input: "pass:lint fail:test pass:build", expectedOutput: "2", isHidden: false, weight: 1 }, { id: "tc2", input: "skip pass:a pass:b fail:c pass:d", expectedOutput: "3", isHidden: true, weight: 1 }], tags, difficulty, xpReward);
+  }
+
+  if (variant === 1) {
+    const title = `${track.title}: duplicate signal check ${index + 1}`;
+    const description = "Read tokens and print `DUPLICATE` if any token appears twice, otherwise `UNIQUE`.";
+
+    if (language === "java") {
+      return coding(title, description, "java", javaStarter("    Set<String> seen = new HashSet<>();\n    while (scanner.hasNext()) {\n      String token = scanner.next();\n      if (seen.contains(token)) {\n        System.out.println(\"DUPLICATE\");\n        return;\n      }\n      seen.add(token);\n    }\n    System.out.println(\"UNIQUE\");"), [{ id: "tc1", input: "alpha beta alpha", expectedOutput: "DUPLICATE", isHidden: false, weight: 1 }, { id: "tc2", input: "red blue green", expectedOutput: "UNIQUE", isHidden: true, weight: 1 }], tags, difficulty, xpReward);
+    }
+
+    if (language === "python") {
+      return coding(title, description, "python", pyStarter("solve", "    tokens = data.split()\n    return 'DUPLICATE' if len(tokens) != len(set(tokens)) else 'UNIQUE'"), [{ id: "tc1", input: "alpha beta alpha", expectedOutput: "DUPLICATE", isHidden: false, weight: 1 }, { id: "tc2", input: "red blue green", expectedOutput: "UNIQUE", isHidden: true, weight: 1 }], tags, difficulty, xpReward);
+    }
+
+    return coding(title, description, "javascript", jsStarter("solve", "  const tokens = input.split(/\\s+/).filter(Boolean);\n  return tokens.length === new Set(tokens).size ? 'UNIQUE' : 'DUPLICATE';"), [{ id: "tc1", input: "alpha beta alpha", expectedOutput: "DUPLICATE", isHidden: false, weight: 1 }, { id: "tc2", input: "red blue green", expectedOutput: "UNIQUE", isHidden: true, weight: 1 }], tags, difficulty, xpReward);
+  }
+
+  if (variant === 2) {
+    const title = `${track.title}: threshold count ${index + 1}`;
+    const description = "Read `threshold|numbers` and print how many numbers are greater than or equal to the threshold.";
+
+    if (language === "java") {
+      return coding(title, description, "java", javaStarter("    String[] parts = scanner.nextLine().split(\"\\\\|\");\n    int threshold = Integer.parseInt(parts[0].trim());\n    int count = 0;\n    if (parts.length > 1) {\n      for (String item : parts[1].trim().split(\"\\\\s+\")) {\n        if (!item.isBlank() && Integer.parseInt(item) >= threshold) count++;\n      }\n    }\n    System.out.println(count);"), [{ id: "tc1", input: "10|3 10 15 8", expectedOutput: "2", isHidden: false, weight: 1 }, { id: "tc2", input: "5|5 4 7 9 1", expectedOutput: "3", isHidden: true, weight: 1 }], tags, difficulty, xpReward);
+    }
+
+    if (language === "python") {
+      return coding(title, description, "python", pyStarter("solve", "    threshold_text, numbers_text = data.split('|')\n    threshold = int(threshold_text)\n    return sum(1 for value in numbers_text.split() if int(value) >= threshold)"), [{ id: "tc1", input: "10|3 10 15 8", expectedOutput: "2", isHidden: false, weight: 1 }, { id: "tc2", input: "5|5 4 7 9 1", expectedOutput: "3", isHidden: true, weight: 1 }], tags, difficulty, xpReward);
+    }
+
+    return coding(title, description, "javascript", jsStarter("solve", "  const [thresholdText, numbersText = ''] = input.split('|');\n  const threshold = Number(thresholdText);\n  return numbersText.split(/\\s+/).filter(Boolean).filter((value) => Number(value) >= threshold).length;"), [{ id: "tc1", input: "10|3 10 15 8", expectedOutput: "2", isHidden: false, weight: 1 }, { id: "tc2", input: "5|5 4 7 9 1", expectedOutput: "3", isHidden: true, weight: 1 }], tags, difficulty, xpReward);
+  }
+
+  const title = `${track.title}: normalize list ${index + 1}`;
+  const description = "Read comma-separated values and print non-empty trimmed lowercase values joined by `|`.";
+
+  if (language === "java") {
+    return coding(title, description, "java", javaStarter("    String line = scanner.hasNextLine() ? scanner.nextLine() : \"\";\n    List<String> output = new ArrayList<>();\n    for (String item : line.split(\",\")) {\n      String normalized = item.trim().toLowerCase();\n      if (!normalized.isEmpty()) output.add(normalized);\n    }\n    System.out.println(String.join(\"|\", output));"), [{ id: "tc1", input: " Ada, LINUS ,Grace ", expectedOutput: "ada|linus|grace", isHidden: false, weight: 1 }, { id: "tc2", input: "One,, TWO", expectedOutput: "one|two", isHidden: true, weight: 1 }], tags, difficulty, xpReward);
+  }
+
+  if (language === "python") {
+    return coding(title, description, "python", pyStarter("solve", "    return '|'.join(item.strip().lower() for item in data.split(',') if item.strip())"), [{ id: "tc1", input: " Ada, LINUS ,Grace ", expectedOutput: "ada|linus|grace", isHidden: false, weight: 1 }, { id: "tc2", input: "One,, TWO", expectedOutput: "one|two", isHidden: true, weight: 1 }], tags, difficulty, xpReward);
+  }
+
+  return coding(title, description, "javascript", jsStarter("solve", "  return input.split(',').map((item) => item.trim().toLowerCase()).filter(Boolean).join('|');"), [{ id: "tc1", input: " Ada, LINUS ,Grace ", expectedOutput: "ada|linus|grace", isHidden: false, weight: 1 }, { id: "tc2", input: "One,, TWO", expectedOutput: "one|two", isHidden: true, weight: 1 }], tags, difficulty, xpReward);
+}
+
+function generatedConceptQuestion(course: CourseSeed, track: TrackSeed, index: number): QuestionSeed {
+  const dimension = masteryDimensions[index % masteryDimensions.length];
+  const difficulty = questionDifficultyForTrack(track.difficulty, index);
+  const tags = [...new Set([...course.tags, dimension.label.replace(/\s+/g, "-")])];
+  const label = `${track.title}: ${dimension.label} ${Math.floor(index / masteryDimensions.length) + 1}`;
+
+  if (index % 3 === 0) {
+    return mcq(
+      label,
+      `In ${course.title}, which choice is the strongest way to handle ${dimension.label} during ${track.title.toLowerCase()} work?`,
+      dimension.correct,
+      dimension.wrong,
+      `${dimension.correct}. The distractors are tempting shortcuts, but they create hidden risk in production workflows.`,
+      tags,
+      difficulty,
+      difficulty === "hard" ? 45 : 30
+    );
+  }
+
+  if (index % 3 === 1) {
+    return multi(
+      label,
+      `Select the practices that make ${dimension.label} reliable in ${track.title.toLowerCase()}.`,
+      dimension.multiCorrect,
+      dimension.wrong.slice(0, 2),
+      `${dimension.multiCorrect.join(", ")} are reliable signals. The wrong answers hide failures or move trust to the wrong place.`,
+      tags,
+      difficulty,
+      difficulty === "hard" ? 55 : 40
+    );
+  }
+
+  return generatedFillBlank(
+    label,
+    `Complete the statement about ${dimension.label} for ${track.title.toLowerCase()}.`,
+    `Strong ${track.title.toLowerCase()} work treats [[BLANK_1]] as explicit and checks the [[BLANK_2]] before relying on a decision.`,
+    dimension.blanks,
+    dimension.distractors,
+    `A strong answer identifies ${dimension.blanks[0]} and ${dimension.blanks[1]} instead of choosing unrelated implementation details.`,
+    tags,
+    difficulty,
+    difficulty === "hard" ? 50 : 35
+  );
+}
+
+function expandTrackQuestions(course: CourseSeed, track: TrackSeed): TrackSeed {
+  const questions = [...track.questions];
+  let generatedIndex = 0;
+
+  while (questions.length < QUESTIONS_PER_TRACK) {
+    const generatedQuestion =
+      generatedIndex % 4 === 3
+        ? generatedCodingQuestion(course, track, generatedIndex)
+        : generatedConceptQuestion(course, track, generatedIndex);
+
+    questions.push(generatedQuestion);
+    generatedIndex += 1;
+  }
+
+  return {
+    ...track,
+    questions,
+  };
+}
+
+function expandCourseQuestions(course: CourseSeed): CourseSeed {
+  return {
+    ...course,
+    tracks: course.tracks.map((track) => expandTrackQuestions(course, track)),
   };
 }
 
@@ -963,11 +1284,13 @@ async function upsertTrack(input: {
 }
 
 async function upsertQuestion(input: QuestionSeed & { trackId: mongoose.Types.ObjectId; order: number }) {
+  const questionInput = mixQuestionOptions(input, `${input.trackId.toString()}:${input.order}:${input.title}`);
+
   return Question.findOneAndUpdate(
-    { trackId: input.trackId, order: input.order },
+    { trackId: questionInput.trackId, order: questionInput.order },
     {
       $set: {
-        ...input,
+        ...questionInput,
         isPublished: true,
       },
     },
@@ -980,9 +1303,12 @@ async function upsertQuestion(input: QuestionSeed & { trackId: mongoose.Types.Ob
 }
 
 async function resetSeededData() {
+  await Attempt.deleteMany({});
   await Progress.deleteMany({});
   await Submission.deleteMany({});
   await CertificateModel.deleteMany({});
+  await ChallengeProgress.deleteMany({});
+  await Challenge.deleteMany({});
   await ActivityLogModel.deleteMany({});
   await Question.deleteMany({});
   await Track.deleteMany({});
@@ -1014,7 +1340,7 @@ async function seed() {
   await reconcileTrackIndexes();
 
   if (shouldReset) {
-    console.log("[seed] Reset flag detected, removing existing catalog, progress, submissions, and certificates...");
+    console.log("[seed] Reset flag detected, removing existing users, catalog, attempts, progress, submissions, certificates, and challenges...");
     await resetSeededData();
   }
 
@@ -1066,7 +1392,9 @@ async function seed() {
     tracks: Array<{ track: Awaited<ReturnType<typeof upsertTrack>>; questions: Awaited<ReturnType<typeof upsertQuestion>>[] }>;
   }> = [];
 
-  for (const courseSeed of [...courseSeeds, ...developerCourseSeeds]) {
+  const seedCatalog = [...courseSeeds, ...developerCourseSeeds].map(expandCourseQuestions);
+
+  for (const courseSeed of seedCatalog) {
     const { tracks, ...courseInput } = courseSeed;
     const course = await upsertCourse({ ...courseInput, createdBy: admin._id });
     const createdTracks: Array<{
@@ -1201,6 +1529,11 @@ async function seed() {
   const firstJsMcq = jsCourse.tracks[0].questions[0];
   const firstJsCoding = jsCourse.tracks[0].questions[3];
   const pendingReviewQuestion = jsCourse.tracks[1].questions[2];
+  const firstJsMcqCorrectOptionId = firstJsMcq.options?.find((option) => option.isCorrect)?.id;
+
+  if (!firstJsMcqCorrectOptionId) {
+    throw new Error("Seeded first JavaScript MCQ is missing a correct option.");
+  }
 
   await Submission.findOneAndUpdate(
     { userId: studentOne._id, questionId: firstJsMcq._id, attemptNumber: 1 },
@@ -1209,7 +1542,7 @@ async function seed() {
         trackId: jsCourse.tracks[0].track._id,
         courseId: jsCourse.course._id,
         type: "mcq",
-        selectedOptions: ["a"],
+        selectedOptions: [firstJsMcqCorrectOptionId],
         isCorrect: true,
         score: 100,
         xpEarned: firstJsMcq.xpReward,

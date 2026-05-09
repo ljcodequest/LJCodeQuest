@@ -64,7 +64,10 @@ const challengeSchema = new Schema<IChallenge>(
   }
 );
 
-challengeSchema.index({ title: "text", summary: "text", category: "text", tags: "text" });
+challengeSchema.index(
+  { title: "text", summary: "text", category: "text", tags: "text" },
+  { default_language: "none", language_override: "textLanguage" }
+);
 
 export const Challenge: Model<IChallenge> =
   mongoose.models.Challenge || mongoose.model<IChallenge>("Challenge", challengeSchema);

@@ -72,6 +72,26 @@ type CourseSeed = {
   tracks: TrackSeed[];
 };
 
+type ChallengeSeed = {
+  title: string;
+  summary: string;
+  description: string;
+  difficulty: "easy" | "medium" | "hard";
+  category: string;
+  language: string;
+  starterCode: string;
+  testCases: Array<{
+    id: string;
+    input: string;
+    expectedOutput: string;
+    isHidden: boolean;
+    weight: number;
+  }>;
+  xpReward: number;
+  timeLimitMinutes: number;
+  tags: string[];
+};
+
 function slugify(value: string) {
   return value
     .toLowerCase()
@@ -1166,6 +1186,189 @@ const developerCourseSeeds: CourseSeed[] = [
   })),
 ];
 
+const challengeSeeds: ChallengeSeed[] = [
+  {
+    title: "Pair Sum Gate",
+    summary: "Detect whether two distinct numbers can unlock a requested target sum.",
+    description:
+      "Read input in the format `target|numbers`. Print `YES` if two distinct numbers from the list add up to the target, otherwise print `NO`.\n\nUse each number at most once. Negative values may appear.",
+    difficulty: "easy",
+    category: "Arrays",
+    language: "javascript",
+    starterCode: jsStarter("solve", "  // Return YES or NO.\n  return 'NO';"),
+    testCases: [
+      { id: "visible-1", input: "10|3 7 4 2", expectedOutput: "YES", isHidden: false, weight: 1 },
+      { id: "visible-2", input: "8|1 2 3 9", expectedOutput: "NO", isHidden: false, weight: 1 },
+      { id: "hidden-1", input: "0|-4 2 4 8", expectedOutput: "YES", isHidden: true, weight: 2 },
+    ],
+    xpReward: 75,
+    timeLimitMinutes: 20,
+    tags: ["arrays", "hash-set", "two-sum"],
+  },
+  {
+    title: "Slug Forge",
+    summary: "Convert messy title text into stable URL slugs.",
+    description:
+      "Read one line of text and print a slug: lowercase it, replace groups of non-alphanumeric characters with one hyphen, and trim leading or trailing hyphens.",
+    difficulty: "easy",
+    category: "Strings",
+    language: "javascript",
+    starterCode: jsStarter("solve", "  // Normalize the input into a URL slug.\n  return input;"),
+    testCases: [
+      { id: "visible-1", input: "React & Next.js App Router", expectedOutput: "react-next-js-app-router", isHidden: false, weight: 1 },
+      { id: "visible-2", input: "  Ship!!! Fast  ", expectedOutput: "ship-fast", isHidden: false, weight: 1 },
+      { id: "hidden-1", input: "API_v2: Contracts", expectedOutput: "api-v2-contracts", isHidden: true, weight: 2 },
+    ],
+    xpReward: 70,
+    timeLimitMinutes: 15,
+    tags: ["strings", "regex", "normalization"],
+  },
+  {
+    title: "Bracket Firewall",
+    summary: "Validate nested bracket structure before code reaches production.",
+    description:
+      "Read a string containing only `()[]{}` characters. Print `VALID` when every opening bracket closes in the correct order, otherwise print `INVALID`.",
+    difficulty: "easy",
+    category: "Stacks",
+    language: "javascript",
+    starterCode: jsStarter("solve", "  // Validate balanced brackets.\n  return 'INVALID';"),
+    testCases: [
+      { id: "visible-1", input: "{[()]}", expectedOutput: "VALID", isHidden: false, weight: 1 },
+      { id: "visible-2", input: "([)]", expectedOutput: "INVALID", isHidden: false, weight: 1 },
+      { id: "hidden-1", input: "(([]){})", expectedOutput: "VALID", isHidden: true, weight: 2 },
+    ],
+    xpReward: 80,
+    timeLimitMinutes: 20,
+    tags: ["stacks", "parsing", "validation"],
+  },
+  {
+    title: "Frequency Leaderboard",
+    summary: "Find the most common token with deterministic tie-breaking.",
+    description:
+      "Read space-separated words. Print the word that appears most often. If multiple words tie, print the lexicographically smallest tied word. Matching is case-insensitive.",
+    difficulty: "medium",
+    category: "Hash Maps",
+    language: "javascript",
+    starterCode: jsStarter("solve", "  // Print the most frequent normalized word.\n  return '';"),
+    testCases: [
+      { id: "visible-1", input: "Red blue red GREEN green", expectedOutput: "green", isHidden: false, weight: 1 },
+      { id: "visible-2", input: "beta alpha beta alpha", expectedOutput: "alpha", isHidden: false, weight: 1 },
+      { id: "hidden-1", input: "Code code quest Quest quest", expectedOutput: "quest", isHidden: true, weight: 2 },
+    ],
+    xpReward: 110,
+    timeLimitMinutes: 25,
+    tags: ["hash-map", "strings", "tie-break"],
+  },
+  {
+    title: "Scoreboard Parser",
+    summary: "Parse compact score rows and report the winning score.",
+    description:
+      "Read `name:score` pairs separated by spaces. Print `name=score` for the highest score. If scores tie, choose the earliest pair in the input.",
+    difficulty: "medium",
+    category: "Parsing",
+    language: "javascript",
+    starterCode: jsStarter("solve", "  // Parse scores and print the winning pair.\n  return '';"),
+    testCases: [
+      { id: "visible-1", input: "ada:98 linus:87 grace:94", expectedOutput: "ada=98", isHidden: false, weight: 1 },
+      { id: "visible-2", input: "a:10 b:10 c:9", expectedOutput: "a=10", isHidden: false, weight: 1 },
+      { id: "hidden-1", input: "x:-5 y:-2 z:-3", expectedOutput: "y=-2", isHidden: true, weight: 2 },
+    ],
+    xpReward: 115,
+    timeLimitMinutes: 25,
+    tags: ["parsing", "arrays", "edge-cases"],
+  },
+  {
+    title: "Rate Limit Buckets",
+    summary: "Count request bursts in fixed-size time buckets.",
+    description:
+      "Read input as `bucketSize|timestamps`. Timestamps are integers in milliseconds. Print comma-separated counts per bucket starting at time `0`. For example, with bucket size `100`, timestamp `250` belongs to bucket `2`.",
+    difficulty: "medium",
+    category: "Systems",
+    language: "javascript",
+    starterCode: jsStarter("solve", "  // Return comma-separated bucket counts.\n  return '';"),
+    testCases: [
+      { id: "visible-1", input: "100|0 20 120 250 260", expectedOutput: "2,1,2", isHidden: false, weight: 1 },
+      { id: "visible-2", input: "50|10 49 50 99 100", expectedOutput: "2,2,1", isHidden: false, weight: 1 },
+      { id: "hidden-1", input: "200|0 199 200 600", expectedOutput: "2,1,0,1", isHidden: true, weight: 2 },
+    ],
+    xpReward: 125,
+    timeLimitMinutes: 30,
+    tags: ["systems", "arrays", "rate-limit"],
+  },
+  {
+    title: "Merge Sorted Streams",
+    summary: "Merge two sorted integer streams into one sorted output.",
+    description:
+      "Read two sorted integer lists separated by `|`. Print the merged sorted list with numbers separated by spaces. Either side may be empty.",
+    difficulty: "medium",
+    category: "Two Pointers",
+    language: "javascript",
+    starterCode: jsStarter("solve", "  // Merge both sorted lists.\n  return '';"),
+    testCases: [
+      { id: "visible-1", input: "1 4 8|2 3 10", expectedOutput: "1 2 3 4 8 10", isHidden: false, weight: 1 },
+      { id: "visible-2", input: "|5 7", expectedOutput: "5 7", isHidden: false, weight: 1 },
+      { id: "hidden-1", input: "-3 0 0|-4 2", expectedOutput: "-4 -3 0 0 2", isHidden: true, weight: 2 },
+    ],
+    xpReward: 120,
+    timeLimitMinutes: 25,
+    tags: ["two-pointers", "arrays", "sorting"],
+  },
+  {
+    title: "Window Pressure",
+    summary: "Find the highest fixed-window load over a stream of readings.",
+    description:
+      "Read `k|numbers`. Print the maximum sum of any contiguous window of size `k`. If `k` is larger than the list length, sum the whole list.",
+    difficulty: "hard",
+    category: "Sliding Window",
+    language: "javascript",
+    starterCode: jsStarter("solve", "  // Compute the maximum fixed-window sum.\n  return 0;"),
+    testCases: [
+      { id: "visible-1", input: "3|2 1 5 1 3 2", expectedOutput: "9", isHidden: false, weight: 1 },
+      { id: "visible-2", input: "2|-5 -1 -3", expectedOutput: "-4", isHidden: false, weight: 1 },
+      { id: "hidden-1", input: "5|4 2", expectedOutput: "6", isHidden: true, weight: 2 },
+    ],
+    xpReward: 160,
+    timeLimitMinutes: 35,
+    tags: ["sliding-window", "arrays", "performance"],
+  },
+  {
+    title: "Component Islands",
+    summary: "Count connected groups in a compact graph input.",
+    description:
+      "Read `n` followed by edges like `0-1 2-3`. Nodes are numbered from `0` to `n - 1`. Print the number of connected components.",
+    difficulty: "hard",
+    category: "Graphs",
+    language: "javascript",
+    starterCode: jsStarter("solve", "  // Count connected components.\n  return 0;"),
+    testCases: [
+      { id: "visible-1", input: "5 0-1 1-2 3-4", expectedOutput: "2", isHidden: false, weight: 1 },
+      { id: "visible-2", input: "4", expectedOutput: "4", isHidden: false, weight: 1 },
+      { id: "hidden-1", input: "6 0-1 2-3 3-4 4-2", expectedOutput: "3", isHidden: true, weight: 2 },
+    ],
+    xpReward: 180,
+    timeLimitMinutes: 40,
+    tags: ["graphs", "dfs", "connectivity"],
+  },
+  {
+    title: "Retry Timeline",
+    summary: "Generate a capped exponential backoff schedule.",
+    description:
+      "Read `attempts base cap`. Print retry delays where delay `i` is `base * 2^i`, capped at `cap`, for `attempts` retries. Separate values with spaces.",
+    difficulty: "hard",
+    category: "Reliability",
+    language: "javascript",
+    starterCode: jsStarter("solve", "  // Build the retry schedule.\n  return '';"),
+    testCases: [
+      { id: "visible-1", input: "4 100 1000", expectedOutput: "100 200 400 800", isHidden: false, weight: 1 },
+      { id: "visible-2", input: "5 250 1000", expectedOutput: "250 500 1000 1000 1000", isHidden: false, weight: 1 },
+      { id: "hidden-1", input: "3 50 75", expectedOutput: "50 75 75", isHidden: true, weight: 2 },
+    ],
+    xpReward: 165,
+    timeLimitMinutes: 30,
+    tags: ["reliability", "backoff", "systems"],
+  },
+];
+
 async function upsertUser(input: {
   email: string;
   displayName: string;
@@ -1302,6 +1505,41 @@ async function upsertQuestion(input: QuestionSeed & { trackId: mongoose.Types.Ob
   );
 }
 
+async function upsertChallenge(input: ChallengeSeed & { createdBy: mongoose.Types.ObjectId }) {
+  const slug = slugify(input.title);
+
+  return Challenge.findOneAndUpdate(
+    { slug },
+    {
+      $set: {
+        title: input.title,
+        slug,
+        summary: input.summary,
+        description: input.description,
+        difficulty: input.difficulty,
+        category: input.category,
+        language: input.language,
+        starterCode: input.starterCode,
+        testCases: input.testCases,
+        xpReward: input.xpReward,
+        timeLimitMinutes: input.timeLimitMinutes,
+        tags: input.tags,
+        isPublished: true,
+        createdBy: input.createdBy,
+      },
+      $setOnInsert: {
+        completionsCount: 0,
+        submissionsCount: 0,
+      },
+    },
+    {
+      upsert: true,
+      returnDocument: "after",
+      runValidators: true,
+    }
+  );
+}
+
 async function resetSeededData() {
   await Attempt.deleteMany({});
   await Progress.deleteMany({});
@@ -1333,11 +1571,33 @@ async function reconcileTrackIndexes() {
   );
 }
 
+async function reconcileChallengeIndexes() {
+  try {
+    await Challenge.collection.dropIndex("title_text_summary_text_category_text_tags_text");
+    console.log("[seed] Dropped legacy challenge text index.");
+  } catch (error) {
+    const mongoError = error as { codeName?: string; code?: number };
+    if (mongoError.codeName !== "IndexNotFound" && mongoError.code !== 27) {
+      throw error;
+    }
+  }
+
+  await Challenge.collection.createIndex(
+    { title: "text", summary: "text", category: "text", tags: "text" },
+    {
+      name: "title_text_summary_text_category_text_tags_text",
+      default_language: "none",
+      language_override: "textLanguage",
+    }
+  );
+}
+
 async function seed() {
   const shouldReset = process.argv.includes(RESET_FLAG);
 
   await dbConnect();
   await reconcileTrackIndexes();
+  await reconcileChallengeIndexes();
 
   if (shouldReset) {
     console.log("[seed] Reset flag detected, removing existing users, catalog, attempts, progress, submissions, certificates, and challenges...");
@@ -1391,6 +1651,7 @@ async function seed() {
     course: Awaited<ReturnType<typeof upsertCourse>>;
     tracks: Array<{ track: Awaited<ReturnType<typeof upsertTrack>>; questions: Awaited<ReturnType<typeof upsertQuestion>>[] }>;
   }> = [];
+  const createdChallenges = [];
 
   const seedCatalog = [...courseSeeds, ...developerCourseSeeds].map(expandCourseQuestions);
 
@@ -1454,6 +1715,10 @@ async function seed() {
     createdCourses.push({ course, tracks: createdTracks });
   }
 
+  for (const challengeSeed of challengeSeeds) {
+    createdChallenges.push(await upsertChallenge({ ...challengeSeed, createdBy: admin._id }));
+  }
+
   const jsCourse = createdCourses[0];
   const pythonCourse = createdCourses[1];
   const dsaCourse = createdCourses[2];
@@ -1481,6 +1746,57 @@ async function seed() {
     },
     { upsert: true, returnDocument: "after" }
   );
+
+  if (createdChallenges.length >= 2) {
+    const completedChallenge = createdChallenges[0];
+    const startedChallenge = createdChallenges[1];
+
+    await ChallengeProgress.findOneAndUpdate(
+      { userId: studentOne._id, challengeId: completedChallenge._id },
+      {
+        $set: {
+          status: "completed",
+          attempts: 2,
+          bestScore: 100,
+          lastSubmittedCode: completedChallenge.starterCode,
+          language: completedChallenge.language,
+          completedAt: new Date(),
+          lastAttemptAt: new Date(),
+        },
+      },
+      { upsert: true, returnDocument: "after" }
+    );
+
+    await ChallengeProgress.findOneAndUpdate(
+      { userId: studentThree._id, challengeId: startedChallenge._id },
+      {
+        $set: {
+          status: "in-progress",
+          attempts: 1,
+          bestScore: 50,
+          lastSubmittedCode: startedChallenge.starterCode,
+          language: startedChallenge.language,
+          lastAttemptAt: new Date(),
+        },
+      },
+      { upsert: true, returnDocument: "after" }
+    );
+
+    await Challenge.bulkWrite([
+      {
+        updateOne: {
+          filter: { _id: completedChallenge._id },
+          update: { $set: { completionsCount: 1, submissionsCount: 2 } },
+        },
+      },
+      {
+        updateOne: {
+          filter: { _id: startedChallenge._id },
+          update: { $set: { completionsCount: 0, submissionsCount: 1 } },
+        },
+      },
+    ]);
+  }
 
   await Progress.findOneAndUpdate(
     { userId: studentTwo._id, courseId: pythonCourse.course._id },
@@ -1647,6 +1963,7 @@ async function seed() {
   ]);
 
   const courseSlugs = createdCourses.map((item) => item.course.slug);
+  const challengeSlugs = createdChallenges.map((item) => item.slug);
   const totalTracks = createdCourses.reduce((sum, item) => sum + item.tracks.length, 0);
   const totalQuestions = createdCourses.reduce(
     (sum, item) => sum + item.tracks.reduce((trackSum, track) => trackSum + track.questions.length, 0),
@@ -1662,7 +1979,8 @@ async function seed() {
   });
   console.log("[seed] Students:", [studentOne.email, studentTwo.email, studentThree.email]);
   console.log("[seed] Courses:", courseSlugs);
-  console.log("[seed] Totals:", { courses: createdCourses.length, tracks: totalTracks, questions: totalQuestions });
+  console.log("[seed] Challenges:", challengeSlugs);
+  console.log("[seed] Totals:", { courses: createdCourses.length, tracks: totalTracks, questions: totalQuestions, challenges: createdChallenges.length });
   console.log("[seed] Tip: Set SEED_ADMIN_EMAIL and SEED_ADMIN_FIREBASE_UID to align admin with your Firebase account.");
 }
 
